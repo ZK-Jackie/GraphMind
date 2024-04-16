@@ -1,9 +1,47 @@
-> <div align="center"><h1>ChatKG<br/>Chat with & Build Your Personal Knowledge Graph </h1><p  style="text-align: center;">ZK-Jackie  2024.3.16</p></div>
+---
+frameworks:
+- PyTorch
 
-[![license](./assets/license.svg)](https://github.com/ZK-Jackie/ChatKG/blob/main/LICENSE) |
-<img src="https://g.alicdn.com/sail-web/maas/1.11.39/static/modelscopeIcon.cd89353f.svg" style="width: 120px; height: 20px"/> | 
-<img src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg" style="height:20px">HuggingFace |
-Openxlab
+license: Apache License 2.0
+
+tasks:
+- relation-extraction
+
+model-type:
+- InternLM-20b-chat
+
+domain:
+- NLP
+
+tags:
+- Fine-tune
+---
+
+
+> <div style="margin: auto; text-align: center;"><h1>ChatKG<br/>Chat with & Build Your Personal Knowledge Graph </h1><p  style="text-align: center;">ZK-Jackie  2024.3.16</p></div>
+
+<div style="display: flex; align-items: center; justify-content: center;">
+    <a href="https://github.com/ZK-Jackie/ChatKG/blob/main/LICENSE">
+        <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/License-Apache--2.0-green.svg" alt="license" height="20px">
+    </a>
+</div>
+<div style="display: flex; align-items: center; justify-content: center; height: 50px;">
+    <a href="https://www.modelscope.cn/models/Jackie101/ChatKG_InternLM" style="border-right: 1px solid lightgray; padding-right: 10px; margin-right: 10px;">
+        <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/modelscope-logo.svg" alt="modelscope" height="20px">
+    </a>
+    <a href="https://huggingface.co/ZK-Jackie/ChatKG_InternLM">
+        <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/hf-logo-with-title.png" alt="huggingface" height="30px">
+    </a>
+    <a href="https://github.com/ZK-Jackie/ChatKG/blob/main/LICENSE" style="border-left: 1px solid lightgray; padding-left: 10px; margin-left: 10px;">
+        <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/openxlab_models.svg" alt="openxlab" height="20px">
+    </a>
+</div>
+<div style="display: flex; align-items: center; justify-content: center; height: 50px;">
+        English
+    <a href="javascript:void(0)" style="border-left: 1px solid lightgray; padding-left: 10px; margin-left: 10px;">
+        中文
+    </a>
+</div>
 
 ## Introduction 📖 
 ChatKG is a LLM application and a intelligent agent based on InternLM and LangChain, devoted to the construction of personal knowledge graph.
@@ -21,14 +59,15 @@ ChatKG is a LLM application and a intelligent agent based on InternLM and LangCh
 ## Features 🌟
 - based on InternLM-chat-7b（Update to InternLM2 lately）
 - Multi-modal Chat with users
-- Highly cust
+- Highly customizable
 
 ## Demo 🎥
 demo is coming soon...
 
-## Timeline ⏲️
-- [2024.3.14] T2KG Dataset prepared, extracting fine-tuning start
-- [2024.3.12] Start the project
+## Developing Timeline ⏲️
+- [2024.4.16] Due to the recent busy academic study, the development of this project has been suspended, and the restart time is unknown...
+- [2024.3.14] T2KG Dataset prepared, extracting fine-tuning start.
+- [2024.3.12] Start the project.
 
 ## Quick Start 🚀
 Firstly, configuration in file `config.py` can be modified according to your needs or local computer environment. The flexible configuration:
@@ -38,17 +77,16 @@ Firstly, configuration in file `config.py` can be modified according to your nee
 | LLM Model Path        | str | `huggingface repo id`    |
 | Chat Function         | bool | `True`                   |
 | Knowledge Graph Cache | str | `kg`                     |
-| Neo4j Bolt URL        | str | `http://localhost:7474/` |
+| Neo4j Bolt URL        | str | `bolt://localhost:7474/` |
 | Neo4j Username        | str | `neo4j`                  |
 | Neo4j Password        | str | `chatkg666`              |
 
 There are two ways to use ChatKG:
 
-- Try the ChatKG on OpenXLab (in the future)
+- Try ChatKG on OpenXLab (in the future)
 
 
-- Run the ChatKG on your local machine
-
+- Run ChatKG on your local machine
 
 **Step 1: Clone the repository**
 ```bash
@@ -73,7 +111,7 @@ http://localhost:7860/
 
 Besides, it is worth mentioning that running *ChatKG* locally means you need to download and load the LLM model and the knowledge graph data.
 
-The model and knowledge graph data is not included in the repository and running it locally requires a lot of hardware resources, here is the recommended hardware configuration:
+The model and knowledge graph data is not included in the repository and running it locally requires a lot of hardware resources, here is the minimum hardware requirements:
 - GPU: 1/4 A100
 - CPU: 8-core
 - Memory: 16G
