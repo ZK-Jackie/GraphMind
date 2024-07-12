@@ -2,7 +2,8 @@
 frameworks:
 - PyTorch
 
-license: Apache License 2.0
+license:
+- Apache License 2.0
 
 tasks:
 - relation-extraction
@@ -15,10 +16,13 @@ domain:
 
 tags:
 - Fine-tune
+- Agent
 ---
 
 
-> <div style="margin: auto; text-align: center;" align="center"><h1>ChatKG<br/>Chat with & Build Your Personal Knowledge Graph </h1><p  style="text-align: center;">ZK-Jackie  2024.3.16</p></div>
+> <div style="margin: auto; text-align: center;" align="center"><h1>ChatKG<br/>Chat with & Build Your Personal Knowledge Graph </h1><p  style="text-align: center;">ZK-Jackie</p></div>
+
+
 
 <div style="display: flex; align-items: center; justify-content: center;" align="center">
     <a href="https://github.com/ZK-Jackie/ChatKG/blob/main/LICENSE">
@@ -26,16 +30,20 @@ tags:
     </a>
 </div>
 <div style="display: flex; align-items: center; justify-content: center; height: 50px;">
-    <a href="https://www.modelscope.cn/models/Jackie101/ChatKG_InternLM" style="border-right: 1px solid lightgray; padding-right: 10px; margin-right: 10px; height: 30px;">
+    <a href="https://www.modelscope.cn/models/Jackie101/ChatKG_InternLM" style="height: 30px;">
     <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/modelscope-logo.svg" alt="modelscope" height="20px">
     </a>
-    <a href="https://huggingface.co/ZK-Jackie/ChatKG_InternLM" style="border-right: 1px solid lightgray; padding-right: 10px; margin-right: 10px; height: 30px;">
+    <span style="margin: auto 10px;"> │ </span>
+    <a href="https://huggingface.co/ZK-Jackie/ChatKG_InternLM" style="height: 30px;">
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/hf-logo-large.png" alt="huggingface" height="30px">
     </a>
+    <span style="margin: auto 10px;"> │ </span>
     <a href="https://github.com/InternLM/Tutorial/tree/camp3" style="display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 18px; color: rgb(27,56,130); height: 30px;">
-        <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/internlm-logo.svg" alt="internlm" height="30px"/> Tutorial
+        <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/internlm-logo.svg" alt="internlm" height="30px"/>
+        <span>Tutorial</span>
     </a>
-    <a href="https://github.com/ZK-Jackie/ChatKG/blob/main/LICENSE" style="border-left: 1px solid lightgray; padding-left: 10px; margin-left: 10px; height: 30px; display: flex; align-items: center; justify-content: center;">
+    <span style="margin: auto 10px;"> │ </span>
+    <a href="https://github.com/ZK-Jackie/ChatKG/blob/main/LICENSE" style="height: 30px; display: flex; align-items: center; justify-content: center;">
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/openxlab-models.svg" alt="openxlab" height="20px">
     </a>
 </div>
