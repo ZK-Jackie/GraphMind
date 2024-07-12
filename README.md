@@ -31,7 +31,7 @@ tags:
 </div>
 <div style="display: flex; align-items: center; justify-content: center; height: 50px;" align="center">
     <a href="https://www.modelscope.cn/models/Jackie101/ChatKG_InternLM" style="height: 30px;">
-    <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/modelscope-logo.svg" alt="modelscope" height="20px">
+      <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/modelscope-logo.svg" alt="modelscope" height="20px">
     </a>
     <span style="padding-left: 10px; padding-right: 10px"> │ </span>
     <a href="https://huggingface.co/ZK-Jackie/ChatKG_InternLM" style="height: 30px;">
@@ -40,16 +40,7 @@ tags:
     <span style="padding-left: 10px; padding-right: 10px"> │ </span>
     <a href="https://github.com/InternLM/Tutorial/tree/camp3" style="display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 18px; color: rgb(27,56,130); height: 30px;">
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/internlm-logo.svg" alt="internlm" height="30px"/>
-        <svg width="59" height="50" xmlns="http://www.w3.org/2000/svg">
-            <style>
-                .tutorial-text {
-                    font-family: Arial, sans-serif;
-                    font-size: 18px;
-                    fill: rgb(27,56,130);
-                }
-            </style>
-            <text x="0" y="32" class="tutorial-text">Tutorial</text>
-        </svg>
+        <img src="data:image/svg+xml;charset=utf-8;base64,PHN2ZyB3aWR0aD0iNTkiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICAgICAgICAgIDxzdHlsZT4KICAgICAgICAgICAgICAgIC50dXRvcmlhbC10ZXh0IHsKICAgICAgICAgICAgICAgICAgICBmb250LWZhbWlseTogQXJpYWwsIHNhbnMtc2VyaWY7CiAgICAgICAgICAgICAgICAgICAgZm9udC1zaXplOiAxOHB4OwogICAgICAgICAgICAgICAgICAgIGZpbGw6IHJnYigyNyw1NiwxMzApOwogICAgICAgICAgICAgICAgfQogICAgICAgICAgICA8L3N0eWxlPgogICAgICAgICAgICA8dGV4dCB4PSIwIiB5PSIzMiIgY2xhc3M9InR1dG9yaWFsLXRleHQiPlR1dG9yaWFsPC90ZXh0PgogICAgICAgIDwvc3ZnPg==" alt="internlm" height="50px"/>
     </a>
     <span style="padding-left: 10px; padding-right: 10px"> │ </span>
     <a href="https://github.com/ZK-Jackie/ChatKG/blob/main/LICENSE" style="height: 30px; display: flex; align-items: center; justify-content: center;">
