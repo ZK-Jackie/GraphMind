@@ -29,27 +29,37 @@ tags:
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/License-Apache--2.0-green.svg" alt="license" height="20px">
     </a>
 </div>
-<div style="display: flex; align-items: center; justify-content: center; height: 50px;">
+<div style="display: flex; align-items: center; justify-content: center; height: 50px;" align="center">
     <a href="https://www.modelscope.cn/models/Jackie101/ChatKG_InternLM" style="height: 30px;">
     <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/modelscope-logo.svg" alt="modelscope" height="20px">
     </a>
-    <span style="margin: auto 10px;"> │ </span>
+    <span style="padding-left: 10px; padding-right: 10px"> │ </span>
     <a href="https://huggingface.co/ZK-Jackie/ChatKG_InternLM" style="height: 30px;">
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/hf-logo-large.png" alt="huggingface" height="30px">
     </a>
-    <span style="margin: auto 10px;"> │ </span>
+    <span style="padding-left: 10px; padding-right: 10px"> │ </span>
     <a href="https://github.com/InternLM/Tutorial/tree/camp3" style="display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 18px; color: rgb(27,56,130); height: 30px;">
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/internlm-logo.svg" alt="internlm" height="30px"/>
-        <span>Tutorial</span>
+        <svg width="59" height="50" xmlns="http://www.w3.org/2000/svg">
+            <style>
+                .tutorial-text {
+                    font-family: Arial, sans-serif;
+                    font-size: 18px;
+                    fill: rgb(27,56,130);
+                }
+            </style>
+            <text x="0" y="32" class="tutorial-text">Tutorial</text>
+        </svg>
     </a>
-    <span style="margin: auto 10px;"> │ </span>
+    <span style="padding-left: 10px; padding-right: 10px"> │ </span>
     <a href="https://github.com/ZK-Jackie/ChatKG/blob/main/LICENSE" style="height: 30px; display: flex; align-items: center; justify-content: center;">
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/openxlab-models.svg" alt="openxlab" height="20px">
     </a>
 </div>
 <div style="display: flex; align-items: center; justify-content: center; height: 50px;" align="center">
         English
-    <a href="javascript:void(0)" style="border-left: 1px solid lightgray; padding-left: 10px; margin-left: 10px;">
+    <span style="padding-left: 10px; padding-right: 10px"> │ </span>
+    <a href="javascript:void(0)">
         中文
     </a>
 </div>
