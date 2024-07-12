@@ -29,7 +29,7 @@ tags:
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/License-Apache--2.0-green.svg" alt="license" height="20px">
     </a>
 </div>
-<div style="display: flex; align-items: center; justify-content: center; height: 50px;" align="center">
+<div style="display: flex; align-items: center; justify-content: center;" align="center">
     <a href="https://www.modelscope.cn/models/Jackie101/ChatKG_InternLM" style="height: 30px;">
       🤖ModelScope 
     </a>
