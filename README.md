@@ -25,7 +25,7 @@ tags:
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/License-Apache--2.0-green.svg" alt="license" height="20px">
     </a>
 </div>
-<div style="display: flex; align-items: center; justify-content: center; height: 50px;" align="center">
+<div style="display: flex; align-items: center; justify-content: center; height: 50px;">
     <a href="https://www.modelscope.cn/models/Jackie101/ChatKG_InternLM" style="border-right: 1px solid lightgray; padding-right: 10px; margin-right: 10px; height: 30px;">
     <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/modelscope-logo.svg" alt="modelscope" height="20px">
     </a>
