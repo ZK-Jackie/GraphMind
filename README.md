@@ -26,10 +26,10 @@ tags:
     </a>
 </div>
 <div style="display: flex; align-items: center; justify-content: center; height: 50px;" align="center">
-    <a href="https://www.modelscope.cn/models/Jackie101/ChatKG_InternLM" style="border-right: 1px solid lightgray; padding-right: 10px; margin-right: 10px; height: 30px; display: flex; align-items: center; justify-content: center;">
+    <a href="https://www.modelscope.cn/models/Jackie101/ChatKG_InternLM" style="border-right: 1px solid lightgray; padding-right: 10px; margin-right: 10px; height: 30px;">
     <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/modelscope-logo.svg" alt="modelscope" height="20px">
     </a>
-    <a href="https://huggingface.co/ZK-Jackie/ChatKG_InternLM" style="border-right: 1px solid lightgray; padding-right: 10px; margin-right: 10px; height: 30px; display: flex; align-items: center; justify-content: center;">
+    <a href="https://huggingface.co/ZK-Jackie/ChatKG_InternLM" style="border-right: 1px solid lightgray; padding-right: 10px; margin-right: 10px; height: 30px;">
         <img src="https://raw.githubusercontent.com/ZK-Jackie/llm_study/master/assests/hf-logo-large.png" alt="huggingface" height="30px">
     </a>
     <a href="https://github.com/InternLM/Tutorial/tree/camp3" style="display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 18px; color: rgb(27,56,130); height: 30px;">
