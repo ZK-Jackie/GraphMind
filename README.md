@@ -19,10 +19,9 @@ tags:
 - Agent
 ---
 
-
-> <div style="margin: auto; text-align: center;" align="center"><h1>ChatKG<br/>Chat with & Build Your Personal Knowledge Graph </h1><p  style="text-align: center;">ZK-Jackie</p></div>
-
-
+<div style="border-bottom: 4px solid black; width: 100%; box-sizing: border-box; text-align: center; padding-top: 0.1rem;" align="center">
+    <h1>ChatKG<br/><span>Chat with & Build Your Knowledge Graph</span></h1>
+</div>
 
 <div style="display: flex; align-items: center; justify-content: center;" align="center">
     <a href="https://github.com/ZK-Jackie/ChatKG/blob/main/LICENSE">
@@ -58,17 +57,17 @@ tags:
 ChatKG is a LLM application and a intelligent agent based on InternLM and LangChain, devoted to the construction of personal knowledge graph.
 
 - Constructing Personal KG
-  - Understand the meaning of the paragraph
+  - Understand the meaning of the paragraph in the user's input or a textbook
   - Build a personal knowledge graph based on the information users provide
-  - Visualize and show the knowledge graph
+  - Visualize and display the knowledge graph
 
 - Chat with users
   - Answer questions based on the knowledge graph
   - Chat with users and answer questions based on the knowledge graph
-  - ...
+  - Assist users in learning and understanding knowledge
 
 ## Features 🌟
-- based on InternLM-chat-7b（Update to InternLM2 lately）
+- based on InternLM-20b-chat（Update to InternLM2 lately）
 - Multi-modal Chat with users
 - Highly customizable
 
@@ -76,7 +75,7 @@ ChatKG is a LLM application and a intelligent agent based on InternLM and LangCh
 demo is coming soon...
 
 ## Developing Timeline ⏲️
-- [2024.7.12] The project is reactivated, and will join the InternLM training camp Ⅲ project.
+- [2024.7.12] The project is reactivated.
 - [2024.4.16] Due to the recent busy academic study, the development of this project has been suspended, and the restart time is unknown...
 - [2024.3.14] T2KG Dataset prepared, extracting fine-tuning start.
 - [2024.3.12] Start the project.
