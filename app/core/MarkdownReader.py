@@ -1,12 +1,11 @@
 from typing import List
 from tqdm import tqdm
-from app.core.info import InfoNode, InfoTree
 import os
 
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 
-from core.info import InfoForest
-from utils.FileReader import FileReader
+from app.core.structure import InfoForest, InfoTree, InfoNode
+from app.utils.FileReader import FileReader
 
 
 class MarkdownReader(FileReader):

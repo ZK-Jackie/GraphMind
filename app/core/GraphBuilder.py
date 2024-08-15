@@ -7,7 +7,7 @@ from typing import List
 from tqdm import tqdm
 
 from langchain_core.prompts import PromptTemplate
-from core.extrction import MarkdownReader
+from app.core.MarkdownReader import MarkdownReader
 from zhipuai import ZhipuAI
 
 default_prompt_template = (
