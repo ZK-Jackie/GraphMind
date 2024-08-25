@@ -3,18 +3,22 @@ import re
 import json
 import warnings
 import time
+from itertools import islice
 from typing import List
 from tqdm import tqdm
-
 from langchain_core.prompts import PromptTemplate
 from app.core.MarkdownReader import MarkdownReader
+from app.core.GraphNeo4j import GraphNeo4j
+from app.core.InfoTree import InfoForest
 from zhipuai import ZhipuAI
+
+
 
 default_prompt_template = (
     "请你对知识文本执行知识提取任务。\n"
     "请根据提供的多级标题和文本内容，执行以下知识提取任务：\n"
-    "1. 综合多个等级的标题，从标题中提取出知识实体。\n"
-    "2. 从文本内容中找出这些知识实体的属性名及属性。\n"
+    "1. 综合多个等级的标题，从标题中提取出知识实体，知识实体是一个知识名词。\n"
+    "2. 从**文本内容**中找出这些知识实体的属性名及属性，忽略**文本内容**中的例题、分析、答案。\n"
     "3. 找出多个实体之间的指向和关系。\n"
     "4. 将提取的内容以JSON字符串格式输出。\n\n"
     "## 输入内容\n"
@@ -66,9 +70,13 @@ default_output_format = """
 
 class GraphBuilder:
     file: str | List[str] | None
+
     engine: str
     prompt_template: str
     insertion_template: str
+
+    doc_trees: InfoForest | None = None
+
     _allowed_engines = ["graphrag", "tradition"]
 
     def __init__(self,
@@ -90,6 +98,11 @@ class GraphBuilder:
         if new_val not in self._allowed_engines:
             raise ValueError(f"Value must be one of {self._allowed_engines}")
         self._engine = new_val
+
+    def get_doc_trees(self, **engine_kwargs):
+        if self.doc_trees is None:
+            self.doc_trees = MarkdownReader(file=self.file, **engine_kwargs).indexing()
+        return self.doc_trees
 
     def build(self, **engine_kwargs):
         # 0. 数据初始化
@@ -134,7 +147,7 @@ class GraphBuilder:
             )
         # 3. 调用引擎，构建知识图谱
         tasks = []
-        client: ZhipuAI = kwargs.get("llm")
+        client: ZhipuAI = kwargs.get("llm")     # 从llm参数中获取client，当前这里是智谱AI，后续再做拓展
         for prompt in prompts:
             # temp_response = kwargs.get("llm").chat.completions.create(
             #     model=kwargs.get("model"),
@@ -158,7 +171,7 @@ class GraphBuilder:
         # 等待所有任务完成
         responses = []
         try:
-            for task in tasks:
+            for task in tqdm(tasks, desc="Waiting for completions"):
                 temp_response = None
                 temp_task_status = "PROCESSING"
                 while temp_task_status != "SUCCESS":
@@ -174,21 +187,25 @@ class GraphBuilder:
                             ]
                         }
                         break
-                    time.sleep(2)
+                    time.sleep(2)   # 每2秒查询一次
                     temp_response = client.chat.asyncCompletions.retrieve_completion_result(id=task["task_id"])
                     temp_task_status = temp_response.task_status
-                # 解析json
+                # 解析 llm 的回答为 json
                 dict_result = self._json_parse(temp_response.choices[0].message.content)
                 responses.append({
                     "task_id": task["task_id"],
                     "task_content": task["task_content"],
                     "task_result": dict_result
                 })
+                # 将 llm 的回答创建/追加写入一个文件内
+                with open("temp_responses.json", "a", encoding="utf-8") as f:
+                    json.dump("\n", f)
+                    json.dump(responses[-1], f, separators=(',', ':'), ensure_ascii=False)
         except Exception as ex:
             # 紧急保存responses
             timestamp = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-            with open(f"responses-{timestamp}.json", "w") as f:
-                json.dump(responses, f, indent=2)
+            with open(f"exception_responses-{timestamp}.json", "w", encoding="utf-8") as f:
+                json.dump(responses, f, indent=2, ensure_ascii=False)
             raise ex
         # 4. 最终转化
         final_res = []
@@ -226,13 +243,36 @@ class GraphBuilder:
 
 
 if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
+    """
+    GraphBuilder类将会是用户使用本程序的核心类之一，用户将会通过这个类来构建知识图谱。
+    下文在演示怎么用这个类来构建知识图谱。
+    这个类还在不断完善开发，后续会将每个组件拆分到其他文件中，以便于维护。
+    """
+    # from dotenv import load_dotenv
+    #
+    # load_dotenv()
+    #
+    # zhipu_client = ZhipuAI(api_key=os.getenv("ZHIPU_API_KEY"))
+    # result = (GraphBuilder(file="ch1.md",
+    #                        engine="tradition")
+    #           .build(skip_mark="<abd>",
+    #                  llm=zhipu_client,
+    #                  model="glm-4-0520"))
+    # json.dump(result, open("result.json", "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    forest = GraphBuilder(file="ch1.md", engine="tradition").get_doc_trees(skip_mark="<abd>")
+    result = json.load(open("result.json", "r", encoding="utf-8"))
+    # 同时遍历两个对象，一一填充对应
+    for tree in forest.trees:
+        for node, res in zip(islice(tree, 1, None), result):
+            if node.content:
+                node.struct_info = res["task_result"]
+    # 将每个节点组织成cypher语句即将被调用的对象
+    cqls = []
+    for tree in forest.trees:
+        for node in tree:
+            if node.content:
+                cqls.extend(node.to_cypher_obj())
+    print(cqls)
+    # 插入到neo4j数据库中
+    graph = GraphNeo4j()
 
-    zhipu_client = ZhipuAI(api_key=os.getenv("ZHIPU_API_KEY"))
-    result = (GraphBuilder(file="ch1_test.md",
-                           engine="tradition")
-              .build(skip_mark="<abd>",
-                     llm=zhipu_client,
-                     model="glm-4-0520"))
-    json.dump(result, open("result.json", "w"), indent=2, ensure_ascii=False)

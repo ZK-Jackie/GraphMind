@@ -4,7 +4,7 @@ import os
 
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 
-from app.core.structure import InfoForest, InfoTree, InfoNode
+from app.core.InfoTree import InfoForest, InfoTree, InfoNode
 from app.utils.FileReader import FileReader
 
 
