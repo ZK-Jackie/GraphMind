@@ -1,7 +1,13 @@
+from typing import List
+from GraphNeo4j import CypherNodeState, CypherRelationState
+import warnings
+
+
 class InfoNode:
     title: str
     content: str | None
     level: int
+    struct_info: dict | None = None
     parent: "InfoNode" = None
     children: list
 
@@ -23,9 +29,41 @@ class InfoNode:
         else:
             return [self.title]
 
+    def to_cypher_obj(self):
+        # 生成cypher语句
+        cypherStates = []
+        # 节点信息
+        if "知识实体" not in self.struct_info or "实体关系" not in self.struct_info:
+            warnings.warn(f"unprocessed struct info is found, titled {self.title}, please build struct info first")
+            return cypherStates
+        try:
+            for entity_name in self.struct_info["知识实体"]:
+                node_state = CypherNodeState(
+                    node_type="知识实体",
+                    node_attr=self.struct_info["知识实体"][entity_name]["属性"]
+                )
+                node_state.node_attr["name"] = entity_name
+                cypherStates.append(node_state)
+            # 关系信息
+            for node1_name in self.struct_info["实体关系"]:
+                relationships = self.struct_info["实体关系"][node1_name]
+                for relation in relationships:
+                    node2_list = self.struct_info["实体关系"][node1_name][relation]
+                    for node2_name in node2_list:
+                        relation_state = CypherRelationState(
+                            node1_name=node1_name,
+                            relation_name=relation,
+                            node2_name=node2_name
+                        )
+                        cypherStates.append(relation_state)
+        except Exception:
+            warnings.warn(f"improper struct info is found, titled {self.title}, please fix struct info first")
+            return cypherStates
+        return cypherStates
+
     def __iter__(self):
         # 生成器，用于遍历当前节点及其所有子节点
-        yield self.get_title_path(), self.content
+        yield self
         for child in self.children:
             yield from child
 
@@ -89,7 +127,7 @@ class InfoTree:
 
 
 class InfoForest:
-    trees: list
+    trees: List[InfoTree]
 
     def __init__(self):
         self.trees = []
