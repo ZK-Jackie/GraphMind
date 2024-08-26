@@ -242,6 +242,26 @@ class GraphBuilder:
         pass
 
 
+def merge_dicts(dict1, dict2, skip_keys=None):
+    if skip_keys is None:
+        skip_keys = ["name", "uid"]
+    merged_dict = {}
+    # Add all keys from dict1
+    for key in dict1:
+        if key in dict2:
+            # If key exists in both, concatenate their values
+            if key not in skip_keys:
+                merged_dict[key] = str(dict1[key]) + "\n" + str(dict2[key])
+        else:
+            # If key exists only in dict1
+            merged_dict[key] = dict1[key]
+    # Add keys from dict2 that are not in dict1
+    for key in dict2:
+        if key not in merged_dict:
+            merged_dict[key] = dict2[key]
+    return merged_dict
+
+
 if __name__ == "__main__":
     """
     GraphBuilder类将会是用户使用本程序的核心类之一，用户将会通过这个类来构建知识图谱。
@@ -267,12 +287,28 @@ if __name__ == "__main__":
             if node.content:
                 node.struct_info = res["task_result"]
     # 将每个节点组织成cypher语句即将被调用的对象
-    cqls = []
+    node_cqls = []
+    relation_cqls = set()
+    unique_node_dict = {}
     for tree in forest.trees:
         for node in tree:
             if node.content:
-                cqls.extend(node.to_cypher_obj())
-    print(cqls)
+                temp_cqls = node.to_cypher_obj()
+                for temp_cql in temp_cqls:
+                    if type(temp_cql).__name__ == "CypherNodeState":
+                        if temp_cql.node_attr["name"] not in unique_node_dict:
+                            unique_node_dict[temp_cql.node_attr["name"]] = temp_cql
+                            node_cqls.append(temp_cql)
+                        else:
+                            for cql in node_cqls:
+                                if cql.node_attr["name"] == temp_cql.node_attr["name"]:
+                                    # TODO merge_dicts去重？！！
+                                    cql.node_attr = merge_dicts(cql.node_attr, temp_cql.node_attr)
+                    else:
+                        relation_cqls.add(temp_cql)
+
+    # print(cqls)
     # 插入到neo4j数据库中
     graph = GraphNeo4j()
+    graph.execute_build(node_cqls)
 

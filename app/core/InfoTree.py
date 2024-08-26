@@ -52,8 +52,10 @@ class InfoNode:
                     for node2_name in node2_list:
                         relation_state = CypherRelationState(
                             node1_name=node1_name,
+                            node1_type="知识实体",
                             relation_name=relation,
-                            node2_name=node2_name
+                            node2_name=node2_name,
+                            node2_type="知识实体",
                         )
                         cypherStates.append(relation_state)
         except Exception:
