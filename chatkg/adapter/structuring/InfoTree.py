@@ -1,5 +1,5 @@
 from typing import List
-from GraphNeo4j import CypherNodeState, CypherRelationState
+from chatkg.adapter.database.GraphNeo4j import CypherNodeState, CypherRelationState
 import warnings
 
 
@@ -65,13 +65,14 @@ class InfoNode:
 
     def __iter__(self):
         # 生成器，用于遍历当前节点及其所有子节点
-        yield self
+        yield self.get_title_path(), self.content
         for child in self.children:
             yield from child
 
 
 class InfoTree:
     main_root: InfoNode
+    node_cnt: int = 0
 
     def __init__(self, node: InfoNode):
         self.main_root = node
@@ -87,6 +88,7 @@ class InfoTree:
             if not root.children:
                 # 如果没有子节点，直接添加
                 root.add_child(node)
+                self.node_cnt += 1
             else:
                 # 如果有子节点，默认当前 node 是当前 root 最后一个 child 的子节点
                 last_child = root.children[-1]
@@ -100,6 +102,7 @@ class InfoTree:
             else:
                 # 如果不是重复节点，添加到 root.parent 的 children 中
                 root.parent.add_child(node)
+                self.node_cnt += 1
         else:
             # 如果当前节点的 level 小于 root 的 level，向上回溯
             self.insert_node(root.parent, node, node_level)
@@ -137,6 +140,12 @@ class InfoForest:
     def add_tree(self, tree: InfoTree):
         self.trees.append(tree)
 
+    def count_node(self):
+        node_cnt = 0
+        for tree in self.trees:
+            node_cnt += tree.node_cnt
+        return node_cnt
+
     def __str__(self):
         result = ""
         for tree in self.trees:
@@ -148,3 +157,67 @@ class InfoForest:
 
     def __iter__(self):
         return iter(self.trees)
+
+
+class InfoTreeTaskResult:
+    source: list | None
+    entity: list | None
+    relation: list | None
+    others: dict | None
+
+    def __init__(self,
+                 source: list | None,
+                 entity: list | None,
+                 relation: list | None,
+                 others: dict | None = None):
+        self.source = source
+        self.entity = entity
+        self.relation = relation
+        self.others = others
+
+    def dump_dict(self):
+        return {
+            "source": self.source,
+            "entity": self.entity,
+            "relation": self.relation,
+            "others": self.others
+        }
+
+
+class InfoTreeTask:
+    task_id: str | None
+    task_prompt: str | None
+    task_result: InfoTreeTaskResult | None
+    task_status: int | None     # 三种任务状态：失败、完成、待修正（0,1,2）
+
+    def __init__(self,
+                 task_id: str | None = None,
+                 task_prompt: str | None = None,
+                 task_result: InfoTreeTaskResult | None = None,
+                 task_status: int | None = None):
+        self.task_id = task_id
+        self.task_prompt = task_prompt
+        self.task_result = task_result
+        self.task_status = task_status
+
+    def dump_dict(self):
+        return {
+            "task_id": self.task_id,
+            "task_prompt": self.task_prompt,
+            "task_response": self.task_result.dump_dict(),
+            "task_status": self.task_status
+        }
+
+    @staticmethod
+    def load_dict(task_dict: dict):
+        return InfoTreeTask(
+            task_id=task_dict["task_id"],
+            task_prompt=task_dict["task_prompt"],
+            task_result=InfoTreeTaskResult(
+                source=task_dict["task_response"]["source"],
+                entity=task_dict["task_response"]["entity"],
+                relation=task_dict["task_response"]["relation"],
+                others=task_dict["task_response"]["others"]
+            ),
+            task_status=task_dict["task_status"]
+        )

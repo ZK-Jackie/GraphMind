@@ -1,4 +1,5 @@
 import neo4j
+import json
 import uuid
 import warnings
 from langchain_community.graphs import Neo4jGraph
@@ -18,6 +19,12 @@ class CypherNodeState:
     def __init__(self, node_type: str, node_attr: dict, uid: uuid.UUID = None):
         if uid is None:
             uid = uuid.uuid4()
+        if type(node_type) is not str:
+            node_type = str(node_type)
+            warnings.warn(f"node_type should be str, but got {type(node_type)}")
+        if type(node_attr) is not dict:
+            node_attr = json.loads(node_attr)
+            warnings.warn(f"node_attr should be dict, but got {type(node_attr)}")
         self.node_type = node_type
         self.node_attr = node_attr
         self.node_attr["uid"] = str(uid)
@@ -109,9 +116,9 @@ class GraphNeo4j:
             try:
                 if states:
                     for state in states:
-                        if "GraphNeo4j.CypherNodeState" in str(type(state)):
+                        if "CypherNodeState" in str(type(state)):
                             _create_node(tx, state)
-                        elif "GraphNeo4j.CypherRelationState" in str(type(state)):
+                        elif "CypherRelationState" in str(type(state)):
                             _create_relation(tx, state)
                 else:
                     warnings.warn("No states to execute")
@@ -123,14 +130,13 @@ class GraphNeo4j:
             print("Transaction committed")
 
 
-
 def _create_node(tx, state: CypherNodeState):
     if "uid" not in state.node_attr:
         state.node_attr["uid"] = uuid.uuid4()
-    node_attr_str = ', '.join([f"{key}: '{value}'" for key, value in state.node_attr.items()])
-    # TODO 插入节点
-    # tx.run(f"CREATE (:{node_type} {node_attr})")
+    node_attr_str = ', '.join([f"{str(key)}: \"{str(value)}\"" for key, value in state.node_attr.items()])
+    # TODO 插入节点优化，想优化成 tx.run(base_str, dict)的形式
     print(f"CREATE (:{state.node_type} {{{node_attr_str}}})")
+    tx.run(f"CREATE (:{state.node_type} {{{node_attr_str}}})")
 
 def _create_relation(tx, state: CypherRelationState):
     node1_name = state.node1_name
@@ -140,6 +146,6 @@ def _create_relation(tx, state: CypherRelationState):
     node2_type = state.node2_type
 
     create_relation_str = f"MATCH (a:{node1_type} {{name: '{node1_name}'}}), (b:{node2_type} {{name: '{node2_name}'}}) CREATE (a)-[r:{relation_name}]->(b)"
-    # TODO 插入节点
-    # tx.run(query, node1_name=node1_name, node2_name=node2_name, relation_name=relation_name)
+    # TODO 插入节点优化，想优化成 tx.run(base_str, dict)的形式
     print(create_relation_str)
+    tx.run(create_relation_str)

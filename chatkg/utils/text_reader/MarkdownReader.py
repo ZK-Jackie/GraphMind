@@ -4,11 +4,11 @@ import os
 
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 
-from app.core.InfoTree import InfoForest, InfoTree, InfoNode
-from app.utils.FileReader import FileReader
+from chatkg.adapter.structuring.InfoTree import InfoForest, InfoTree, InfoNode
+from chatkg.utils.text_reader import TextReader
 
 
-class MarkdownReader(FileReader):
+class MarkdownReader(TextReader):
     file: str | List[str]
     skip_mark: str
 
@@ -76,7 +76,7 @@ class MarkdownReader(FileReader):
                     content=now_doc_content,
                     level=now_doc_level
                 )
-                # 给这个 root 只是为了方便插入节点，减缓时间复杂度
+                # 给这个 temp_node 只是为了方便插入节点，减小时间复杂度
                 tree.insert_node(temp_node, now_node, now_doc_level)
                 temp_node = now_node
             forest.add_tree(tree)
@@ -86,7 +86,7 @@ class MarkdownReader(FileReader):
 
 if __name__ == "__main__":
     # 1. 创建MarkdownReader对象
-    md_reader = MarkdownReader(file="ch1.md", skip_mark="<abd>")
+    md_reader = MarkdownReader(file="../../core/temp/ch1.md", skip_mark="<abd>")
     # 2. 索引文件
     doc_forest = md_reader.indexing()
     # 3. 输出
