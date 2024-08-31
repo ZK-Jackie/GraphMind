@@ -1,3 +1,5 @@
+from distutils.util import execute
+
 import neo4j
 import json
 import uuid
@@ -6,6 +8,7 @@ from langchain_community.graphs import Neo4jGraph
 from neo4j import GraphDatabase, Driver
 from typing import List
 
+from chatkg.adapter.database.base import BaseDatabase
 
 default_url = "bolt://localhost:7687"
 default_username = "neo4j"
@@ -88,7 +91,7 @@ class CypherRelationState:
         return self.node1_name == other.node1_name and self.relation_name == other.relation_name and self.node2_name == other.node2_name
 
 
-class GraphNeo4j:
+class GraphNeo4j(BaseDatabase):
     _lc_graph_client: Neo4jGraph | None = None
     _graph_client: Driver | None = None
 
@@ -128,6 +131,9 @@ class GraphNeo4j:
                 raise e
             tx.commit()
             print("Transaction committed")
+
+    async def a_execute_build(self, states: List[CypherNodeState|CypherRelationState]):
+        self.execute_build(states)
 
 
 def _create_node(tx, state: CypherNodeState):

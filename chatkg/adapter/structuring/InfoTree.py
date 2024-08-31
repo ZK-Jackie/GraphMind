@@ -11,7 +11,11 @@ class InfoNode:
     parent: "InfoNode" = None
     children: list
 
-    def __init__(self, title: str, content: str, level: int, parent=None):
+    def __init__(self,
+                 title: str,
+                 content: str | None,
+                 level: int,
+                 parent=None):
         self.title = title
         self.content = content
         self.parent = parent
