@@ -18,12 +18,19 @@ from zhipuai import ZhipuAI
 
 from chatkg.adapter.database import CypherRelationState
 
+default_system_prompt = (
+    "你是一个知识提取助手，你的任务是分析用户提供的文本，并从中提取关键信息。"
+    "在提取信息时，请专注于事实、数据点和关键概念。"
+    "忽略非关键细节和主观意见。"
+    "请以要求的格式提供提取出的知识点。"
+)
+
 default_prompt_template = (
     "请根据提供的多级标题和文本内容，执行以下知识提取任务：\n"
     "1. 综合多个等级的标题，从标题中提取出一个或多个知识实体，每个知识实体都是一个知识名词。\n"
     "2. 从**文本内容**中找出这些知识实体的属性名及属性，忽略**文本内容**中的例题、分析、答案。\n"
-    "3. 从标题之间、标题与正文之间、正文之间找出或总结出提取的实体之间的指向和关系词。\n"
-    "4. 将提取的内容以JSON字符串格式输出；若值是空的，输出空的对象或空的数组。\n\n"
+    "3. 从标题之间、标题与正文之间、正文之间找出或总结出提取的实体之间的关系词。\n"
+    "4. 将提取的内容以JSON字符串格式输出。\n\n"
     "## 输入内容\n"
     "{insertion}"
     "## 输出格式\n"
@@ -60,7 +67,7 @@ default_output_format = """
       "实体关系": {
         "实体1": {
           "关系词1": ["实体2", "实体3"],
-          "关系词2": ["实体4", "实体5"],
+          "关系词2": ["实体4"],
           ...
         },
         "实体2": {
@@ -163,6 +170,7 @@ class GraphBuilder:
                 temp_response = client.chat.asyncCompletions.create(
                     model=kwargs.get("model"),
                     messages=[
+                        {"role": "system", "content": default_system_prompt},
                         {"role": "user", "content": task.task_prompt},
                     ]
                 )
