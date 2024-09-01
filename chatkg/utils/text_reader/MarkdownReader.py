@@ -1,34 +1,15 @@
-from typing import List
+from pydantic import Field
 from tqdm import tqdm
-import os
+
 
 from langchain_text_splitters import MarkdownHeaderTextSplitter
+from chatkg.adapter.structure.InfoTree import InfoForest, InfoTree, InfoNode
+from chatkg.utils.text_reader.base import BaseReader
 
-from chatkg.adapter.structuring.InfoTree import InfoForest, InfoTree, InfoNode
-from chatkg.utils.text_reader import TextReader
 
-
-class MarkdownReader(TextReader):
-    file: str | List[str]
+class MarkdownReader(BaseReader):
     skip_mark: str
-
-    def __init__(self,
-                 file: str | List[str],
-                 skip_mark: str = "<skip>",
-                 **kwargs):
-        md_file = []
-        if file:
-            if os.path.isdir(file):
-                for root, dirs, files in os.walk(file):
-                    for f in files:
-                        if f.endswith('.md'):
-                            md_file.append(os.path.join(root, f))
-            else:
-                md_file.append(file)
-        if not md_file:
-            raise ValueError("No md file or directory provided")
-        self.file = md_file
-        self.skip_mark = skip_mark
+    index_str: str | None = Field(default=None)
 
     def indexing(self):
         splitter = MarkdownHeaderTextSplitter(
@@ -55,7 +36,7 @@ class MarkdownReader(TextReader):
             doc_para_list = splitter.split_text(markdown_text)
             # 构造 info 树
             temp_node = None
-            tree = InfoTree(
+            info_tree = InfoTree(
                 InfoNode(
                     title="《离散数学》",
                     content=None,
@@ -77,19 +58,23 @@ class MarkdownReader(TextReader):
                     level=now_doc_level
                 )
                 # 给这个 temp_node 只是为了方便插入节点，减小时间复杂度
-                tree.insert_node(temp_node, now_node, now_doc_level)
+                info_tree.insert_node(temp_node, now_node, now_doc_level)
                 temp_node = now_node
-            forest.add_tree(tree)
+            forest.add_tree(info_tree)
         return forest
 
+    def get_index(self):
+        if self.index_str is None:
+            raise ValueError("Index not found, please indexing first")
+        return self.indexing()
 
 
-if __name__ == "__main__":
-    # 1. 创建MarkdownReader对象
-    md_reader = MarkdownReader(file="../../core/temp/ch1.md", skip_mark="<abd>")
-    # 2. 索引文件
-    doc_forest = md_reader.indexing()
-    # 3. 输出
-    for tree in doc_forest.trees:
-        for node in tree.traverse(tree.main_root):
-            print()
+# if __name__ == "__main__":
+#     # 1. 创建MarkdownReader对象
+#     md_reader = MarkdownReader(file="../../core/temp/ch1.md", skip_mark="<abd>")
+#     # 2. 索引文件
+#     doc_forest = md_reader.indexing()
+#     # 3. 输出
+#     for tree in doc_forest.trees:
+#         for node in tree.traverse(tree.main_root):
+#             print()

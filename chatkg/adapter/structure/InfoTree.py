@@ -1,6 +1,11 @@
-from typing import List
+from typing import List, Dict
+
+from pydantic import Field, ConfigDict, model_serializer
+
 from chatkg.adapter.database.GraphNeo4j import CypherNodeState, CypherRelationState
+from chatkg.adapter.structure.base import BaseStructure, BaseTaskResult, BaseTask
 import warnings
+import json
 
 
 class InfoNode:
@@ -111,7 +116,8 @@ class InfoTree:
             # 如果当前节点的 level 小于 root 的 level，向上回溯
             self.insert_node(root.parent, node, node_level)
 
-    def _is_dup_children(self, root: InfoNode, node: InfoNode):
+    @staticmethod
+    def _is_dup_children(root: InfoNode, node: InfoNode):
         for child in root.children:
             if child.title == node.title:
                 return True, child
@@ -128,18 +134,17 @@ class InfoTree:
     def __str__(self):
         return self._print_tree(self.main_root)
 
-    def traverse(self, root: InfoNode):
+    @staticmethod
+    def traverse(root: InfoNode):
         return iter(root)
 
     def __iter__(self):
         return self.traverse(self.main_root)
 
 
-class InfoForest:
-    trees: List[InfoTree]
-
-    def __init__(self):
-        self.trees = []
+class InfoForest(BaseStructure):
+    trees: List[InfoTree] = Field(default=[])
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def add_tree(self, tree: InfoTree):
         self.trees.append(tree)
@@ -162,22 +167,15 @@ class InfoForest:
     def __iter__(self):
         return iter(self.trees)
 
+    def get_index(self):
+        return self.__str__()
 
-class InfoTreeTaskResult:
-    source: list | None
-    entity: list | None
-    relation: list | None
-    others: dict | None
 
-    def __init__(self,
-                 source: list | None,
-                 entity: list | None,
-                 relation: list | None,
-                 others: dict | None = None):
-        self.source = source
-        self.entity = entity
-        self.relation = relation
-        self.others = others
+class InfoTreeTaskResult(BaseTaskResult):
+    source: str | list | None =  Field(default=None)
+    entity: str | list | None = Field(default=None)
+    relation: str | list | None = Field(default=None)
+    others: str | dict | None = Field(default=None)
 
     def dump_dict(self):
         return {
@@ -187,36 +185,28 @@ class InfoTreeTaskResult:
             "others": self.others
         }
 
+    def from_dict(self, values: dict):
+        return InfoTreeTaskResult(
+            source=values.get("source"),
+            entity=values.get("entity"),
+            relation=values.get("relation"),
+            others=values.get("others")
+        )
 
-class InfoTreeTask:
-    task_id: str | None
-    task_prompt: str | None
-    task_result: InfoTreeTaskResult | None
-    task_status: int | None     # 三种任务状态：失败、完成、待修正（0,1,2）
 
-    def __init__(self,
-                 task_id: str | None = None,
-                 task_prompt: str | None = None,
-                 task_result: InfoTreeTaskResult | None = None,
-                 task_status: int | None = None):
-        self.task_id = task_id
-        self.task_prompt = task_prompt
-        self.task_result = task_result
-        self.task_status = task_status
-
+class InfoTreeTask(BaseTask):
     def dump_dict(self):
         return {
             "task_id": self.task_id,
-            "task_prompt": self.task_prompt,
+            "task_prompt": self.task_user_prompt,
             "task_response": self.task_result.dump_dict(),
             "task_status": self.task_status
         }
 
-    @staticmethod
-    def load_dict(task_dict: dict):
+    def from_dict(self, task_dict: dict):
         return InfoTreeTask(
             task_id=task_dict["task_id"],
-            task_prompt=task_dict["task_prompt"],
+            task_user_prompt=task_dict["task_prompt"],
             task_result=InfoTreeTaskResult(
                 source=task_dict["task_response"]["source"],
                 entity=task_dict["task_response"]["entity"],
@@ -225,3 +215,30 @@ class InfoTreeTask:
             ),
             task_status=task_dict["task_status"]
         )
+
+def tree_task_serialize(tree_task):
+    if not tree_task:
+        return {}
+    elif isinstance(tree_task, list):
+        return [tree_task_serialize(task) for task in tree_task]
+    else:
+        temp_dict = {
+            "task_id": tree_task.task_id,
+            "task_prompt": tree_task.task_user_prompt,
+            "task_response": {
+                "source": tree_task.task_result.source,
+                "entity": tree_task.task_result.entity,
+                "relation": tree_task.task_result.relation,
+                "others": tree_task.task_result
+            },
+            "task_status": tree_task.task_status
+        }
+        return temp_dict
+
+def tree_task_result_serialize(tree_task_result):
+    return {
+        "source": tree_task_result.source,
+        "entity": tree_task_result.entity,
+        "relation": tree_task_result.relation,
+        "others": tree_task_result.others
+    }

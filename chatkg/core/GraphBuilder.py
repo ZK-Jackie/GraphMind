@@ -13,7 +13,7 @@ from tqdm import tqdm
 from langchain_core.prompts import PromptTemplate
 from chatkg.utils.text_reader.MarkdownReader import MarkdownReader
 from chatkg.adapter.database.GraphNeo4j import GraphNeo4j, CypherNodeState
-from chatkg.adapter.structuring.InfoTree import InfoTreeTask, InfoTreeTaskResult
+from chatkg.adapter.structure.InfoTree import InfoTreeTask, InfoTreeTaskResult
 from zhipuai import ZhipuAI
 
 from chatkg.adapter.database import CypherRelationState
@@ -125,7 +125,7 @@ class GraphBuilder:
             self._tradition_engine(engine_kwargs)
         return self
 
-    # TODO 以后要封装到 engine 类里面
+
     def _tradition_engine(self, kwargs):
         # 0. 建立一个缓存工作目录，后续会用到
         temp_dir = f"temp/{time.strftime('%Y%m%d%H%M%S')}"
@@ -159,7 +159,7 @@ class GraphBuilder:
                                .to_string())
                 # 1.2.3 构建 task，填补 prompt 添加到 tasks 列表中
                 temp_task_result = InfoTreeTaskResult(source=source_list, entity=[], relation=[])
-                temp_task = InfoTreeTask(task_prompt=temp_prompt, task_result=temp_task_result)
+                temp_task = InfoTreeTask(task_user_prompt=temp_prompt, task_result=temp_task_result)
                 tasks.append(temp_task)
         # 2. 调用 TaskLLM，构建知识图谱
         try:
@@ -171,7 +171,7 @@ class GraphBuilder:
                     model=kwargs.get("model"),
                     messages=[
                         {"role": "system", "content": default_system_prompt},
-                        {"role": "user", "content": task.task_prompt},
+                        {"role": "user", "content": task.task_user_prompt},
                     ]
                 )
                 task.task_id = temp_response.id

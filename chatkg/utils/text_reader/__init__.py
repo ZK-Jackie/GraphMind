@@ -1,4 +1,3 @@
-from base import TextReader
-from MarkdownReader import MarkdownReader
+from chatkg.utils.text_reader.MarkdownReader import MarkdownReader
 
-__all__ = ["TextReader", "MarkdownReader"]
+__all__ = ["MarkdownReader"]
