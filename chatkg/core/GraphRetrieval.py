@@ -1,12 +1,12 @@
 """
 知识图谱检索器
 """
-from chatkg.adapter.database import BaseDatabase
+from chatkg.adapter.database import BaseGraphDatabase
 
 class GraphRetrieval:
-    db: BaseDatabase | None = None
+    db: BaseGraphDatabase | None = None
 
-    def __init__(self, db: BaseDatabase, **kwargs):
+    def __init__(self, db: BaseGraphDatabase, **kwargs):
         self.db = db
 
     def search(self, query):

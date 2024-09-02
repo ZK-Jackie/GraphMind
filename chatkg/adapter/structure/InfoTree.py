@@ -172,10 +172,17 @@ class InfoForest(BaseStructure):
 
 
 class InfoTreeTaskResult(BaseTaskResult):
-    source: str | list | None =  Field(default=None)
-    entity: str | list | None = Field(default=None)
-    relation: str | list | None = Field(default=None)
-    others: str | dict | None = Field(default=None)
+    source: str | list | None
+    entity: str | list | None
+    relation: str | list | None
+    others: str | dict | None
+
+    def __init__(self, **data):
+        self.source = data.get("source")
+        self.entity = data.get("entity")
+        self.relation = data.get("relation")
+        self.others = data.get("others")
+
 
     def dump_dict(self):
         return {
@@ -185,7 +192,8 @@ class InfoTreeTaskResult(BaseTaskResult):
             "others": self.others
         }
 
-    def from_dict(self, values: dict):
+    @staticmethod
+    def from_dict(values: dict):
         return InfoTreeTaskResult(
             source=values.get("source"),
             entity=values.get("entity"),
@@ -195,11 +203,25 @@ class InfoTreeTaskResult(BaseTaskResult):
 
 
 class InfoTreeTask(BaseTask):
+
+    def __init__(self, **data):
+        self.task_id = data.get("task_id")
+        self.task_user_prompt = data.get("task_user_prompt")
+        self.task_system_prompt = data.get("task_system_prompt")
+        self.task_output = data.get("task_output")
+        if isinstance(data.get("task_result"), InfoTreeTaskResult):
+            self.task_result = data.get("task_result")
+        else:
+            self.task_result = InfoTreeTaskResult.from_dict(data.get("task_result"))
+        self.task_status = data.get("task_status")
+
     def dump_dict(self):
         return {
             "task_id": self.task_id,
-            "task_prompt": self.task_user_prompt,
-            "task_response": self.task_result.dump_dict(),
+            "task_system_prompt": self.task_system_prompt,
+            "task_user_prompt": self.task_user_prompt,
+            "task_output": self.task_output,
+            "task_result": self.task_result.dump_dict(),
             "task_status": self.task_status
         }
 
