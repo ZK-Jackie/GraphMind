@@ -34,19 +34,10 @@ demo is coming soon...
 
 GraphMind is still under development...
 
-
 ## Structure 🏗️
-```text
-tree
-.
-├─assets
-├─chat
-├─kg
-└─rag
-```
 
-## License 📜
-This project is released under the [Apache License 2.0](LICENSE). Please also adhere to the Licenses of models and datasets being used.
+GraphMind is still under development...
+
 
 ## Contact 📧
 If you have any questions, please contact me at [EMAIL](mailto:jackiey101@foxmail.com)
