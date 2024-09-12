@@ -1,0 +1,2 @@
+xtuner[deepspeed]==0.1.15
+opencv-fixer==0.2.5

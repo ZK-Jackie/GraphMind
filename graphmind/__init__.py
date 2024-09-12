@@ -1,0 +1,3 @@
+"""
+GraphMind root.
+"""

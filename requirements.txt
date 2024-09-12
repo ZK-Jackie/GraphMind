@@ -1,0 +1,19 @@
+python-dotenv
+tqdm==4.66.5
+pydantic==2.8.2
+six
+oss2==2.18.4
+unstructured==0.15.1
+markdown==3.6
+langchain==0.2.10
+langchain-community==0.2.9
+langchain-core==0.2.22
+langchain-openai==0.1.11
+langchain-text-splitters==0.2.2
+langchainhub==0.1.20
+zhipuai==2.1.4.20230814
+neo4j==5.23.0
+pandas==2.2.2
+# requirements-graphrag.txt
+graphrag==0.3.2
+tenacity==8.5.0
