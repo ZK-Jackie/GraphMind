@@ -3,6 +3,7 @@ from langchain_core.prompts import PromptTemplate
 
 import prompt.default as def_prompt
 
+
 class TraditionEnginePrompt:
     """
     Tradition引擎的提示词，后期开放自定义接口
@@ -43,7 +44,24 @@ class TraditionEnginePrompt:
         """构建插入段"""
         return self.user_prompt_insertion_template.format(level_name=level_name, level_content=level_content)
 
+    def build_compare_prompt(self, node1: dict, node2: dict, source1: list, source2: list) -> str:
+        """构建对比提示词"""
+        temp_prompt = (PromptTemplate
+                       .from_template(def_prompt.default_compare_prompt_template)
+                       .invoke({"node1": node1, "node2": node2, "source1": source1, "source2": source2})
+                       .to_string())
+        return temp_prompt
+
+    def build_merge_prompt(self, node1: dict, node2: dict, source1: list, source2: list) -> str:
+        """构建合并提示词"""
+        temp_prompt = (PromptTemplate
+                       .from_template(def_prompt.default_merge_prompt_template)
+                       .invoke({"node1": node1, "node2": node2, "source1": source1, "source2": source2,
+                                "output_format": def_prompt.default_merge_output_format})
+                       .to_string())
+        return temp_prompt
+
     @staticmethod
-    def transform_output(func: callable, use_default: bool=True, **kwargs) -> Any:
+    def transform_output(func: callable, use_default: bool = True, **kwargs) -> Any:
         """转换输出"""
         return func(**kwargs)
