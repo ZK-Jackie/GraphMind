@@ -26,7 +26,7 @@ class MarkdownReader(BaseReader):
             return_each_line=False,
         )
 
-        forest = InfoForest()
+        forest = InfoForest(title="《离散数学》")
         # 1. 逐个处理md文件
         for md in tqdm(self.file, desc="Indexing markdown files"):
             # 打开文件，加载文件内容
@@ -36,14 +36,7 @@ class MarkdownReader(BaseReader):
             doc_para_list = splitter.split_text(markdown_text)
             # 构造 info 树
             temp_node = None
-            info_tree = InfoTree(
-                InfoNode(
-                    title="《离散数学》",
-                    content=None,
-                    parent=None,
-                    level=0
-                )
-            )
+            info_tree = InfoTree()
             for doc in doc_para_list:
                 if self.skip_mark in str(doc.metadata):
                     continue
