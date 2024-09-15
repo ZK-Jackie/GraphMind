@@ -11,7 +11,8 @@ from graphrag.config import GraphRagConfig
 from graphrag.index.api import build_index
 from graphrag.index.progress.load_progress_reporter import load_progress_reporter
 
-from graphmind.adapter.engine import BaseEngine, CustomGraphRagConfig
+from graphmind.adapter.engine import BaseEngine
+from graphmind.adapter.engine.ms_graphrag.custom_config import CustomGraphRagConfig
 from graphmind.adapter.llm import TaskZhipuAI, EmbeddingsZhipuAI
 
 
