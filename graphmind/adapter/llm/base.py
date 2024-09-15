@@ -42,7 +42,7 @@ class BaseTaskLLM(BaseModel, ABC):
     def execute_task(self,
                      task: BaseTask | List[BaseTask],
                      mode="sync",
-                     **kwargs):
+                     **kwargs) -> BaseTask | List[BaseTask]:
         pass
 
 

@@ -19,8 +19,8 @@ import asyncio
 ####################################################################################################
 class TaskZhipuAI(BaseTaskLLM):
     json_output: bool = Field(description="Whether to parse the output to json", default=False)
-    _zhipu_client: ZhipuAI | None = Field(description="ZhipuAI client", default=None)
-    _progress_bar: tqdm | None = Field(description="Progress bar from caller", default=None)
+    _zhipu_client: ZhipuAI | None = None
+    _progress_bar: tqdm | None = None
 
     @model_validator(mode="after")
     def create_zhipu_client(self):
@@ -40,7 +40,7 @@ class TaskZhipuAI(BaseTaskLLM):
         elif mode == "async":
             return asyncio.run(self._async_execute(task, **kwargs))
 
-    def _sync_submit_single(self, task: BaseTask, **kwargs):
+    def _sync_submit_single(self, task: BaseTask, **kwargs) -> BaseTask:
         client = self._zhipu_client
         response = client.chat.completions.create(
             model=self.llm_name,
@@ -50,7 +50,10 @@ class TaskZhipuAI(BaseTaskLLM):
             ]
         )
         task.task_output = response.choices[0].message.content
-        if self.json_output:
+        temp_json_output = kwargs.get("json_output")
+        if temp_json_output is None:
+            temp_json_output = self.json_output
+        if temp_json_output:
             task.task_output = _parse_to_json(task.task_output)
         return task
 
