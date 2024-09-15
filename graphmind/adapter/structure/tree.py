@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Iterator, Any
 
 from pydantic import Field, ConfigDict
 
@@ -7,11 +7,22 @@ from graphmind.adapter.structure import BaseStructure, BaseTaskResult, BaseTask
 
 class InfoNode:
     title: str
+    """Markdown 标题"""
+
     content: str | None
+    """Markdown 正文"""
+
     level: int
-    struct_info: dict | None = None
+    """标题级别"""
+
     parent: "InfoNode" = None
+    """父节点"""
+
     children: list
+    """子节点列表"""
+
+    task: "InfoTreeTask" = None
+    """任务信息"""
 
     def __init__(self,
                  title: str,
@@ -21,69 +32,41 @@ class InfoNode:
         self.title = title
         self.content = content
         self.parent = parent
-        self.children = []
         self.level = level
+        self.children = []  # 问题：为什么必须在这里初始化一个空列表，不能在前面定义的时候初始化一个空列表，否则会出现内存异常
 
     def add_child(self, node: "InfoNode"):
         node.parent = self
         self.children.append(node)
 
-    def get_title_path(self):
+    def get_title_path(self) -> List[str]:
         # 递归获取从根节点到当前节点的title列表
         if self.parent:
             return self.parent.get_title_path() + [self.title]
         else:
             return [self.title]
 
-    # def to_cypher_obj(self):
-    #     # 生成cypher语句
-    #     cypherStates = []
-    #     # 节点信息
-    #     if "知识实体" not in self.struct_info or "实体关系" not in self.struct_info:
-    #         warnings.warn(f"unprocessed struct info is found, titled {self.title}, please build struct info first")
-    #         return cypherStates
-    #     try:
-    #         for entity_name in self.struct_info["知识实体"]:
-    #             node_state = CypherNodeState(
-    #                 node_type="知识实体",
-    #                 node_attr=self.struct_info["知识实体"][entity_name]["属性"]
-    #             )
-    #             node_state.node_attr["name"] = entity_name
-    #             cypherStates.append(node_state)
-    #         # 关系信息
-    #         for node1_name in self.struct_info["实体关系"]:
-    #             relationships = self.struct_info["实体关系"][node1_name]
-    #             for relation in relationships:
-    #                 node2_list = self.struct_info["实体关系"][node1_name][relation]
-    #                 for node2_name in node2_list:
-    #                     relation_state = CypherRelationState(
-    #                         node1_name=node1_name,
-    #                         node1_type="知识实体",
-    #                         relation_name=relation,
-    #                         node2_name=node2_name,
-    #                         node2_type="知识实体",
-    #                     )
-    #                     cypherStates.append(relation_state)
-    #     except Exception:
-    #         warnings.warn(f"improper struct info is found, titled {self.title}, please fix struct info first")
-    #         return cypherStates
-    #     return cypherStates
-
-    def __iter__(self):
+    def __iter__(self) -> "InfoNode":
         # 生成器，用于遍历当前节点及其所有子节点
-        yield self.get_title_path(), self.content
+        yield self
         for child in self.children:
             yield from child
 
 
 class InfoTree:
-    main_root: InfoNode
-    node_cnt: int = 0
+    main_root: InfoNode | None = None
+    """根节点"""
 
-    def __init__(self, node: InfoNode):
-        self.main_root = node
+    node_cnt: int = 0
+    """当前树的总节点数量"""
+
+    def __init__(self):
+        self.main_root = None
 
     def insert_node(self, root: InfoNode, node: InfoNode, node_level: int):
+        if self.main_root is None:
+            self.main_root = node
+            return self
         if not root:
             root = self.main_root
         root_level = root.level
@@ -114,13 +97,13 @@ class InfoTree:
             self.insert_node(root.parent, node, node_level)
 
     @staticmethod
-    def _is_dup_children(root: InfoNode, node: InfoNode):
+    def _is_dup_children(root: InfoNode, node: InfoNode) -> (bool, InfoNode | None):
         for child in root.children:
             if child.title == node.title:
                 return True, child
         return False, None
 
-    def _print_tree(self, root: InfoNode, depth=0):
+    def _print_tree(self, root: InfoNode, depth=0) -> str:
         if not root:
             return ""
         result = "  " * depth + f"{root.title}\n"
@@ -128,57 +111,64 @@ class InfoTree:
             result += self._print_tree(child, depth + 1)
         return result
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self._print_tree(self.main_root)
 
     @staticmethod
-    def traverse(root: InfoNode):
+    def traverse(root: InfoNode) -> Iterator["InfoNode"] | None:
         return iter(root)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator["InfoNode"]:
         return self.traverse(self.main_root)
 
 
 class InfoForest(BaseStructure):
     trees: List[InfoTree] = Field(default=[])
+    """树的列表"""
+
+    title: str = Field(description="Title of the forest", default="Info Forest")
+    """书本标题"""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    """pydantic 配置：允许任意类型"""
 
     def add_tree(self, tree: InfoTree):
         self.trees.append(tree)
 
-    def count_node(self):
+    def count_node(self) -> int:
         node_cnt = 0
         for tree in self.trees:
             node_cnt += tree.node_cnt
         return node_cnt
 
-    def __str__(self):
+    def __str__(self) -> str:
         result = ""
         for tree in self.trees:
             result += str(tree)
         return result
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.trees)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[InfoTree]:
         return iter(self.trees)
 
-    def get_index(self):
+    def get_index(self) -> str:
         return self.__str__()
 
 
 class InfoTreeTaskResult(BaseTaskResult):
-    source: List[str] | str | None
-    entity: dict | str | None
-    relation: dict | str | None
-    others: dict | str | None
+    source: Any | None = Field(description="Source of the information", default=None)
+    """来源"""
 
-    def __init__(self, **data):
-        self.source = data.get("source")
-        self.entity = data.get("entity")
-        self.relation = data.get("relation")
-        self.others = data.get("others")
+    entity: Any | None = Field(description="Entity", default=None)
+    """实体"""
+
+    relation: Any | dict | None = Field(description="Relation", default=None)
+    """关系"""
+
+    others: Any | None = Field(description="Other information", default=None)
+    """其他信息"""
 
     def dump_dict(self):
         return {
@@ -188,28 +178,9 @@ class InfoTreeTaskResult(BaseTaskResult):
             "others": self.others
         }
 
-    @staticmethod
-    def from_dict(values: dict):
-        return InfoTreeTaskResult(
-            source=values.get("source"),
-            entity=values.get("entity"),
-            relation=values.get("relation"),
-            others=values.get("others")
-        )
-
 
 class InfoTreeTask(BaseTask):
-
-    def __init__(self, **data):
-        self.task_id = data.get("task_id")
-        self.task_user_prompt = data.get("task_user_prompt")
-        self.task_system_prompt = data.get("task_system_prompt")
-        self.task_output = data.get("task_output")
-        if isinstance(data.get("task_result"), InfoTreeTaskResult):
-            self.task_result = data.get("task_result")
-        else:
-            self.task_result = InfoTreeTaskResult.from_dict(data.get("task_result"))
-        self.task_status = data.get("task_status")
+    task_result: InfoTreeTaskResult | None = Field(description="Structured output from llm", default=None)
 
     def dump_dict(self):
         return {
@@ -220,43 +191,3 @@ class InfoTreeTask(BaseTask):
             "task_result": self.task_result.dump_dict(),
             "task_status": self.task_status
         }
-
-    @staticmethod
-    def from_dict(task_dict: dict):
-        return InfoTreeTask(
-            task_id=task_dict.get("task_id"),
-            task_system_prompt=task_dict.get("task_system_prompt"),
-            task_user_prompt=task_dict.get("task_user_prompt"),
-            task_output=task_dict.get("task_output"),
-            task_result=InfoTreeTaskResult.from_dict(task_dict.get("task_result")),
-            task_status=task_dict.get("task_status")
-        )
-
-
-def tree_task_serialize(tree_task):
-    if not tree_task:
-        return {}
-    elif isinstance(tree_task, list):
-        return [tree_task_serialize(task) for task in tree_task]
-    else:
-        temp_dict = {
-            "task_id": tree_task.task_id,
-            "task_prompt": tree_task.task_user_prompt,
-            "task_response": {
-                "source": tree_task.task_result.source,
-                "entity": tree_task.task_result.entity,
-                "relation": tree_task.task_result.relation,
-                "others": tree_task.task_result
-            },
-            "task_status": tree_task.task_status
-        }
-        return temp_dict
-
-
-def tree_task_result_serialize(tree_task_result):
-    return {
-        "source": tree_task_result.source,
-        "entity": tree_task_result.entity,
-        "relation": tree_task_result.relation,
-        "others": tree_task_result.others
-    }

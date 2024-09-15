@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Union, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class BaseStructure(BaseModel, ABC):
@@ -9,39 +9,43 @@ class BaseStructure(BaseModel, ABC):
         pass
 
 
-class BaseTaskResult(ABC):
-
-    @abstractmethod
-    def __init__(self, **data):
-        pass
-
-    @abstractmethod
-    def dump_dict(self):
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def from_dict(values: dict):
-        pass
-
-
-class BaseTask(ABC):
-    task_id: Any | str | None
-    task_system_prompt: Any | str | None
-    task_user_prompt: Any | str | None
-    task_output: Any | Dict | str | None
-    task_result: Union[BaseTaskResult, Any, Dict, str, None]
-    task_status: Any | str | int | None
-
-    @abstractmethod
-    def __init__(self, **data):
-        pass
+class BaseTaskResult(BaseModel, ABC):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """pydantic 配置：允许任意类型"""
 
     @abstractmethod
     def dump_dict(self):
         pass
 
-    @staticmethod
-    @abstractmethod
-    def from_dict(values: dict):
-        pass
+
+class BaseTask(BaseModel, ABC):
+    task_id: Any | None = Field(description="Task ID", default=None)
+    """任务ID"""
+
+    task_system_prompt: Any | None = Field(description="System prompt", default=None)
+    """LLM 的系统提示词"""
+
+    task_user_prompt: Any | None = Field(description="User prompt", default=None)
+    """用户提示词"""
+
+    task_output: Any | None = Field(description="Raw output from llm", default=None)
+    """LLM 的原始输出"""
+
+    task_result: BaseTaskResult | None = Field(description="Structured output from llm", default=None)
+    """LLM 的结构化输出，最好重写这个属性"""
+
+    task_status: Any | None = Field(description="Task executing status", default=None)
+    """任务执行状态"""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """pydantic 配置：允许任意类型"""
+
+    def dump_dict(self):
+        return {
+            "task_id": self.task_id,
+            "task_system_prompt": self.task_system_prompt,
+            "task_user_prompt": self.task_user_prompt,
+            "task_output": self.task_output,
+            "task_result": self.task_result.dump_dict(),
+            "task_status": self.task_status
+        }
