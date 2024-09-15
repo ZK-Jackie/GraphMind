@@ -6,6 +6,8 @@ from langchain_community.graphs import Neo4jGraph
 from neo4j import GraphDatabase, Driver
 from typing import List, Dict
 
+from pydantic import model_validator, Field
+
 from graphmind.adapter.structure import InfoTreeTask, BaseTaskResult, BaseTask
 from graphmind.adapter.database import BaseGraphDatabase
 
@@ -92,18 +94,22 @@ class CypherRelationState:
 
 
 class GraphNeo4j(BaseGraphDatabase):
+    uri: str = Field(description="The URI of the Neo4j database", default=default_url)
+    username: str = Field(description="The username of the Neo4j database", default=default_username)
+    password: str = Field(description="The password of the Neo4j database", default=default_password)
+    database: str = Field(description="The database name of the Neo4j database", default=default_database)
+
     def search(self, query):
         pass
 
     _lc_graph_client: Neo4jGraph | None = None
     _graph_client: Driver | None = None
 
-    def __init__(self,
-                 uri: str = default_url,
-                 username: str = default_username,
-                 password: str = default_password):
-        self._lc_graph_client = Neo4jGraph(default_url, default_username, default_password, default_database)
-        self._graph_client = GraphDatabase.driver(uri, auth=(username, password), database=default_database)
+    @model_validator(mode="after")
+    def validate_environment(self):
+        self._lc_graph_client = Neo4jGraph(self.uri, self.username, self.password, self.database)
+        self._graph_client = GraphDatabase.driver(self.uri, auth=(self.username, self.password), database=self.database)
+        return self
 
     def destroy(self):
         if self._graph_client:

@@ -3,11 +3,10 @@
 """
 from abc import ABC, abstractmethod
 
+from pydantic import BaseModel
 
-class BaseGraphDatabase(ABC):
-    @abstractmethod
-    def __init__(self, config):
-        pass
+
+class BaseGraphDatabase(BaseModel, ABC):
 
     @abstractmethod
     def search(self, query):
