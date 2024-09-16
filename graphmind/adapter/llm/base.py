@@ -52,7 +52,7 @@ class BaseTextEmbeddings(BaseModel, ABC):
     embeddings_kwargs: Dict[str, Any] = Field(default_factory=dict)
     # api连接参数
     api_key: str | None = Field(default=None)
-    api_base: str = Field(alias="base_url", default=None)
+    api_base: str = Field(default=None)
     # 部分模型可能还有别的参数
     app_id: str | None = Field(default=None)
     app_sk: str | None = Field(default=None)

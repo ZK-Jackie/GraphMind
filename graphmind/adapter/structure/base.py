@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union, Dict, Any
+from typing import Any
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -18,7 +18,7 @@ class BaseTaskResult(BaseModel, ABC):
         pass
 
 
-class BaseTask(BaseModel, ABC):
+class BaseTask(BaseModel):
     task_id: Any | None = Field(description="Task ID", default=None)
     """任务ID"""
 
@@ -31,8 +31,8 @@ class BaseTask(BaseModel, ABC):
     task_output: Any | None = Field(description="Raw output from llm", default=None)
     """LLM 的原始输出"""
 
-    task_result: BaseTaskResult | None = Field(description="Structured output from llm", default=None)
-    """LLM 的结构化输出，最好重写这个属性"""
+    task_result: Any | None = Field(description="Task result", default=None)
+    """放用户可自定义的结构化输出结果，dump的时候不会提及"""
 
     task_status: Any | None = Field(description="Task executing status", default=None)
     """任务执行状态"""
@@ -46,6 +46,5 @@ class BaseTask(BaseModel, ABC):
             "task_system_prompt": self.task_system_prompt,
             "task_user_prompt": self.task_user_prompt,
             "task_output": self.task_output,
-            "task_result": self.task_result.dump_dict(),
             "task_status": self.task_status
         }

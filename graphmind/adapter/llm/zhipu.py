@@ -15,12 +15,16 @@ import json
 import asyncio
 
 ####################################################################################################
-# Chat model
+# Task Model
 ####################################################################################################
 class TaskZhipuAI(BaseTaskLLM):
     json_output: bool = Field(description="Whether to parse the output to json", default=False)
+
     _zhipu_client: ZhipuAI | None = None
     _progress_bar: tqdm | None = None
+
+    _retry_tasks: List[BaseTask] = []
+    _resume_tasks: List[BaseTask] = []
 
     @model_validator(mode="after")
     def create_zhipu_client(self):
@@ -41,20 +45,41 @@ class TaskZhipuAI(BaseTaskLLM):
             return asyncio.run(self._async_execute(task, **kwargs))
 
     def _sync_submit_single(self, task: BaseTask, **kwargs) -> BaseTask:
+        # 1 发出请求
         client = self._zhipu_client
         response = client.chat.completions.create(
             model=self.llm_name,
             messages=[
                 {"role": "system", "content": task.task_system_prompt},
                 {"role": "user", "content": task.task_user_prompt},
-            ]
+            ],
+            temperature=kwargs.get("temperature") or self.llm_kwargs.get("temperature") or 0.1,
         )
-        task.task_output = response.choices[0].message.content
-        temp_json_output = kwargs.get("json_output")
-        if temp_json_output is None:
-            temp_json_output = self.json_output
-        if temp_json_output:
-            task.task_output = _parse_to_json(task.task_output)
+        # 2 获取结果
+        task.task_output = response.choices[0].message.content  # 文本结果
+        # TODO multi-round 情况下的处理，async同理
+        if response.choices[0].finish_reason in ["network_error"]:
+            # 记录晚点要重试或继续的任务
+            self._retry_tasks.append(task)
+        elif response.choices[0].finish_reason in ["max_tokens", "length"]:
+            # 记录晚点要继续的任务
+            self._resume_tasks.append(task)
+        # 3 结果解析
+        json_output_flag = kwargs.get("json_output", self.json_output)
+        try:
+            if json_output_flag:
+                task.task_result = _parse_to_json(task.task_output)
+            # 如果有自定义的输出解析器
+            if kwargs.get("output_parser"):
+                task.task_result = kwargs.get("output_parser")(task.task_result)
+            task.task_status = "SUCCESS"
+            # 进度条递增
+            if self._progress_bar:
+                self._progress_bar.update(1)
+        except UserWarning:
+            warnings.warn(f"Failed to parse : {task.task_output}")
+            task.task_status = "PARSING_FAILED"
+            task.task_result = {"output": task.task_output, "result": task.task_result}
         return task
 
     def _sync_execute(self, task: BaseTask | List[BaseTask], **kwargs) -> BaseTask | List[BaseTask]:
@@ -73,7 +98,8 @@ class TaskZhipuAI(BaseTaskLLM):
             messages=[
                 {"role": "system", "content": task.task_system_prompt},
                 {"role": "user", "content": task.task_user_prompt},
-            ]
+            ],
+            temperature=kwargs.get("temperature") or self.llm_kwargs.get("temperature") or 0.1,
         )
         task.task_id = response.id
         return task
@@ -94,8 +120,22 @@ class TaskZhipuAI(BaseTaskLLM):
             temp_response = client.chat.asyncCompletions.retrieve_completion_result(task.task_id)
             temp_task_status = temp_response.task_status
         task.task_output = temp_response.choices[0].message.content
-        if self.json_output:
-            task.task_output = _parse_to_json(task.task_output)
+        # 如果需要解析为json
+        json_output_flag = kwargs.get("json_output", self.json_output)
+        try:
+            if json_output_flag:
+                task.task_result = _parse_to_json(task.task_output)
+            # 如果有自定义的输出解析器
+            if kwargs.get("output_parser") and json_output_flag:
+                task.task_result = kwargs.get("output_parser")(task.task_result)
+            elif kwargs.get("output_parser"):
+                task.task_result = kwargs.get("output_parser")(task.task_output)
+            task.task_status = "SUCCESS"
+        except UserWarning:
+            warnings.warn(f"Failed to parse : {task.task_output}")
+            task.task_status = "PARSING_FAILED"
+            task.task_result = {"output": task.task_output, "result": task.task_result}
+        # 进度条递增
         if self._progress_bar:
             self._progress_bar.update(1)
         return task
@@ -116,26 +156,32 @@ class TaskZhipuAI(BaseTaskLLM):
             results = await asyncio.gather(*collect_tasks)
             return results
 
+def _create_conversation(client: ZhipuAI, messages: List[dict], mode: str) -> dict:
+    # 多轮对话
+    pass
 
-# TODO 使用 pydantic + langchain 重写该类
+
 def _parse_to_json(raw_str: str) -> dict:
+    # 0 所有的单反斜杠转为双反斜杠
+    raw_str = raw_str.replace("\\", "\\\\")
+    exceptions = []
+    # 1 尝试直接解析json字符串
     try:
-        # 把 json 字符串转换为字典
-        out = json.loads(raw_str)
+        return json.loads(raw_str)
     except Exception as e1:
-        # 若生成markdown代码块字符串，需要从代码块中提取json字符串
-        try:
-            # 从代码块中提取json字符串
-            out = json.loads(raw_str.split("```")[1])
-        except Exception as e2:
-            try:
-                # 从代码块中提取json字符串
-                out = _extract_json_code_block(raw_str)
-            except Exception as e3:
-                # 若都失败，返回原始字符串
-                out = {"raw": raw_str}
-                warnings.warn(f"Failed to parse to json: {raw_str}")
-    return out
+        exceptions.append(e1)
+    # 2 尝试从代码块中提取json字符串
+    try:
+        return json.loads(raw_str.split("```")[1])
+    except Exception as e2:
+        exceptions.append(e2)
+    # 3 尝试自定义的提取方法
+    try:
+        return _extract_json_code_block(raw_str)
+    except Exception as e3:
+        exceptions.append(e3)
+    # 如果所有尝试都失败了，抛出UserWarning
+    raise UserWarning(f"Failed to parse to json: {raw_str}") from exceptions[0] if exceptions else None
 
 
 def _extract_json_code_block(raw_str: str):
@@ -147,7 +193,7 @@ def _extract_json_code_block(raw_str: str):
 
 
 ####################################################################################################
-# Embeddings
+# Embeddings Model
 ####################################################################################################
 class EmbeddingsZhipuAI(BaseTextEmbeddings):
     _zhipu_client: ZhipuAI | None = None

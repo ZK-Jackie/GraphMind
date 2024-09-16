@@ -8,7 +8,7 @@ from typing import List, Dict
 
 from pydantic import model_validator, Field
 
-from graphmind.adapter.structure import InfoTreeTask, BaseTaskResult, BaseTask
+from graphmind.adapter.structure import BaseTaskResult, BaseTask
 from graphmind.adapter.database import BaseGraphDatabase
 
 default_url = "bolt://localhost:7687"
@@ -169,7 +169,7 @@ class GraphNeo4j(BaseGraphDatabase):
             # 转换文件
             final_result = []
             for item in raw_result:
-                final_result.append(InfoTreeTask.from_dict(item))
+                final_result.append("BaseTask.from_dict(item)")
             # 移交给正常的persist函数
             self.persist(final_result)
         return self

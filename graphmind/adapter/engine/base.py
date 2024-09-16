@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, model_validator
 
 import os
 import time
+import pandas as pd
 
 from graphmind.adapter.database import BaseGraphDatabase
 from graphmind.adapter.llm.base import BaseTaskLLM, BaseTextEmbeddings
@@ -12,7 +13,6 @@ from graphmind.utils.text_reader.base import BaseReader
 
 
 class BaseEngine(BaseModel, ABC):
-
     work_dir: str = Field(default=f"{os.getcwd()}/work_dir/{time.strftime('%Y%m%d%H%M%S')}")
     """工作、缓存路径"""
 
@@ -56,3 +56,65 @@ class BaseEngine(BaseModel, ABC):
     def persist_database(self, **kwargs):
         pass
 
+
+class BaseEntity(BaseModel):
+    type: str | None = Field(description="Entity type", default=None)
+    """实体类型"""
+
+    name: str | None = Field(description="Entity name", default=None)
+    """实体名字"""
+
+    attributes: dict | None = Field(description="Entity attributes", default=None)
+    """实体属性"""
+
+    source: list | str | None = Field(description="Entity source", default=None)
+    """实体来源"""
+
+    def dump_dict(self):
+        return {
+            "type": self.type,
+            "name": self.name,
+            "attributes": self.attributes,
+            "source": self.source
+        }
+
+    def get_kv_attributes(self) -> str:
+        temp_str = ""
+        for k, v in self.attributes.items():
+            temp_str += f"{k}: {v}"
+            if k != list(self.attributes.keys())[-1]:
+                temp_str += ", "
+        return temp_str
+
+
+
+
+class BaseRelation(BaseModel):
+    start: str | None = Field(description="Start node name", default=None)
+    """开始节点名字"""
+
+    end: str | None = Field(description="End node name", default=None)
+    """结束节点名字"""
+
+    relation: str | None = Field(description="Relation name", default=None)
+    """关系名字"""
+
+    description: str | None = Field(description="Relation description", default=None)
+    """关系描述"""
+
+    attributes: dict | None = Field(description="Relation attributes", default=None)
+    """关系属性"""
+
+    source: list | str | None = Field(description="Entity source", default=None)
+    """关系来源"""
+
+
+    def dump_dict(self):
+        return {
+            "start": self.start,
+            "end": self.end,
+            "relation": self.relation,
+            "description": self.description,
+            "attributes": self.attributes,
+            "source": self.source
+        }

@@ -2,12 +2,12 @@ import pandas as pd
 from neo4j import GraphDatabase
 import time
 
-GRAPHRAG_FOLDER = "graphrag20240904"
+GRAPHRAG_FOLDER = "testDiscreteMath"
 
 NEO4J_URI="bolt://localhost:7687"
 NEO4J_USERNAME="neo4j"
 NEO4J_PASSWORD="password"
-NEO4J_DATABASE="graphrag20240904"
+NEO4J_DATABASE="discrete-math-doc"
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
 
@@ -39,32 +39,30 @@ for statement in statements:
         driver.execute_query(statement)
 
 # 三、导入文档
-doc_df = pd.read_parquet(f'{GRAPHRAG_FOLDER}/create_final_documents.parquet', columns=["id", "title"])
-doc_df.head(2)
-
 # import documents
-statement = """  
-MERGE (d:__Document__ {id:value.id})  
-SET d += value {.title}  
-"""
-batched_import(statement, doc_df)
+# doc_df = pd.read_parquet(f'{GRAPHRAG_FOLDER}/create_final_documents.parquet', columns=["id", "title"])
+# doc_df.head(2)
+# statement = """
+# MERGE (d:__Document__ {id:value.id})
+# SET d += value {.title}
+# """
+# batched_import(statement, doc_df)
 
-text_df = pd.read_parquet(f'{GRAPHRAG_FOLDER}/create_final_text_units.parquet',
-                          columns=["id","text","n_tokens","document_ids"])
-text_df.head(2)
+# import text units
+# text_df = pd.read_parquet(f'{GRAPHRAG_FOLDER}/create_final_text_units.parquet',
+#                           columns=["id","text","n_tokens","document_ids"])
+# text_df.head(2)
+# statement = """
+# MERGE (c:__Chunk__ {id:value.id})
+# SET c += value {.text, .n_tokens}
+# WITH c, value
+# UNWIND value.document_ids AS document
+# MATCH (d:__Document__ {id:document})
+# MERGE (c)-[:PART_OF]->(d)
+# """
+# batched_import(statement, text_df)
 
-
-statement = """  
-MERGE (c:__Chunk__ {id:value.id})  
-SET c += value {.text, .n_tokens}  
-WITH c, value  
-UNWIND value.document_ids AS document  
-MATCH (d:__Document__ {id:document})  
-MERGE (c)-[:PART_OF]->(d)  
-"""
-batched_import(statement, text_df)
-
-
+# import entities
 entity_df = pd.read_parquet(f'{GRAPHRAG_FOLDER}/create_final_entities.parquet',
                             columns=["name","type","description","human_readable_id","id","description_embedding","text_unit_ids"])
 entity_df.head(2)
@@ -81,7 +79,7 @@ MERGE (c)-[:HAS_ENTITY]->(e)
 """
 batched_import(entity_statement, entity_df)
 
-
+# import relationships
 rel_df = pd.read_parquet(f'{GRAPHRAG_FOLDER}/create_final_relationships.parquet',
                          columns=["source","target","id","rank","weight","human_readable_id","description","text_unit_ids"])
 rel_df.head(2)

@@ -2,7 +2,8 @@ from typing import List, Iterator, Any
 
 from pydantic import Field, ConfigDict
 
-from graphmind.adapter.structure import BaseStructure, BaseTaskResult, BaseTask
+from graphmind.adapter.engine.base import BaseEntity, BaseRelation
+from graphmind.adapter.structure import BaseStructure, BaseTask
 
 
 class InfoNode:
@@ -21,8 +22,17 @@ class InfoNode:
     children: list
     """子节点列表"""
 
-    task: "InfoTreeTask" = None
-    """任务信息"""
+    entity: list[BaseEntity] | None = None
+    """实体信息"""
+
+    relation: list[BaseRelation] | None = None
+    """关系信息"""
+
+    entity_task: "BaseTask" = None
+    """实体任务信息"""
+
+    relation_task: "BaseTask" = None
+    """关系任务信息"""
 
     def __init__(self,
                  title: str,
@@ -45,6 +55,11 @@ class InfoNode:
             return self.parent.get_title_path() + [self.title]
         else:
             return [self.title]
+
+    def get_entity_names(self) -> List[str]:
+        if self.entity:
+            return [entity.name for entity in self.entity]
+        return []
 
     def __iter__(self) -> "InfoNode":
         # 生成器，用于遍历当前节点及其所有子节点
@@ -155,39 +170,3 @@ class InfoForest(BaseStructure):
 
     def get_index(self) -> str:
         return self.__str__()
-
-
-class InfoTreeTaskResult(BaseTaskResult):
-    source: Any | None = Field(description="Source of the information", default=None)
-    """来源"""
-
-    entity: Any | None = Field(description="Entity", default=None)
-    """实体"""
-
-    relation: Any | dict | None = Field(description="Relation", default=None)
-    """关系"""
-
-    others: Any | None = Field(description="Other information", default=None)
-    """其他信息"""
-
-    def dump_dict(self):
-        return {
-            "source": self.source,
-            "entity": self.entity,
-            "relation": self.relation,
-            "others": self.others
-        }
-
-
-class InfoTreeTask(BaseTask):
-    task_result: InfoTreeTaskResult | None = Field(description="Structured output from llm", default=None)
-
-    def dump_dict(self):
-        return {
-            "task_id": self.task_id,
-            "task_system_prompt": self.task_system_prompt,
-            "task_user_prompt": self.task_user_prompt,
-            "task_output": self.task_output,
-            "task_result": self.task_result.dump_dict(),
-            "task_status": self.task_status
-        }

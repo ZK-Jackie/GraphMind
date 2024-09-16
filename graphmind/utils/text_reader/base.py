@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 import os
 
+from graphmind.adapter.structure import BaseStructure
+
 
 class BaseReader(BaseModel, ABC):
     file: str | list | None = Field(description="File path or directory path")
@@ -18,7 +20,7 @@ class BaseReader(BaseModel, ABC):
     """需要读取分析成的结构类型"""
 
     @abstractmethod
-    def indexing(self, **kwargs):
+    def indexing(self, **kwargs) -> BaseStructure:
         """
         读取、处理输入文件，将文件编制成特定的struct_type结构，
         典型地，通常将 Markdown 文件根据标题、段落编制成树状结构

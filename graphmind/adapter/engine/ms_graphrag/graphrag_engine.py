@@ -43,14 +43,14 @@ class GraphragEngine(BaseEngine):
     def execute(self, **kwargs):
         # 1 检查是不是openai类的模型
         if not isinstance(self.llm, TaskZhipuAI):
-            warnings.warn("This engine only supports OpenAI api like llm.")
+            warnings.warn("GraphRAG Engine only accept OpenAI api like llm.")
         # 2 运行 GraphRAG
         run_id = time.strftime("%Y%m%d-%H%M%S")
         progress_reporter = load_progress_reporter("rich")
         outputs = asyncio.run(
-            build_index(self.graphrag_config, run_id, False, progress_reporter, None)
+            build_index(config=self.graphrag_config, run_id=run_id, is_resume_run=False,
+                        progress_reporter=progress_reporter)
         )
-        # TODO 后续处理
 
         return self
 

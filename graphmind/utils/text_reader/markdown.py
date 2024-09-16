@@ -3,15 +3,15 @@ from tqdm import tqdm
 
 
 from langchain_text_splitters import MarkdownHeaderTextSplitter
-from graphmind.adapter.structure import InfoForest, InfoTree, InfoNode
+from graphmind.adapter.structure.tree import InfoForest, InfoTree, InfoNode
 from graphmind.utils.text_reader.base import BaseReader
 
 
 class MarkdownReader(BaseReader):
-    skip_mark: str
+    skip_mark: str = Field(default="<abd>")
     index_str: str | None = Field(default=None)
 
-    def indexing(self):
+    def indexing(self) -> InfoForest:
         splitter = MarkdownHeaderTextSplitter(
             headers_to_split_on=[
                 ("#", "Header1"),
