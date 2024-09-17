@@ -3,7 +3,7 @@ import os
 from graphmind.adapter.database import GraphNeo4j
 from graphmind.adapter.engine import TraditionEngine
 from graphmind.adapter.llm import TaskZhipuAI
-from graphmind.utils.text_reader import MarkdownReader
+from graphmind.utils.text_reader.markdown import MarkdownReader
 
 if __name__ == '__main__':
     from dotenv import load_dotenv
