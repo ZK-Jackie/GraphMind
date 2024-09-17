@@ -51,22 +51,26 @@ class TraditionEngine(BaseEngine):
         """
         # 1 调用 reader，构造结构森林
         info = self._execute_reader(**kwargs)
-        # 2 步骤1：构造实体提取任务
-        entity_tasks = self._execute_entity_task_maker(info)
-        # 3 步骤2：执行实体提取任务
-        self._execute_entity_task(entity_tasks)
-        # 阶段性处理、保存（主要针对node）
-        self._execute_stage_save_1(info)
-        # 4 步骤3：构造关系提取任务
-        relation_tasks = self._execute_relation_task_maker(info)
-        # 5 步骤4：执行关系提取任务
-        self._execute_relation_task(relation_tasks)
-        # 阶段性处理、保存（主要针对relation）
-        self._execute_stage_save_2(info)
-        # 6 步骤5：整理实体表
-        self._execute_final_entity(info)
-        # 7 步骤6：整理关系表
-        self._execute_final_relation(info)
+        try:
+            # 2 步骤1：构造实体提取任务
+            entity_tasks = self._execute_entity_task_maker(info)
+            # 3 步骤2：执行实体提取任务
+            self._execute_entity_task(entity_tasks)
+            # 阶段性处理、保存（主要针对node）
+            self._execute_stage_save_1(info)
+            # 4 步骤3：构造关系提取任务
+            relation_tasks = self._execute_relation_task_maker(info)
+            # 5 步骤4：执行关系提取任务
+            self._execute_relation_task(relation_tasks)
+            # 阶段性处理、保存（主要针对relation）
+            self._execute_stage_save_2(info)
+            # 6 步骤5：整理实体表
+            self._execute_final_entity(info)
+            # 7 步骤6：整理关系表
+            self._execute_final_relation(info)
+        except Exception as e:
+            info.dump_pickle(f"{self.work_dir}/info.pkl")
+            raise RuntimeError(f"Failed to execute task: {e}")
         # 阶段性处理，保存提取结果
         # self.persist_local(**kwargs)
 
@@ -92,7 +96,7 @@ class TraditionEngine(BaseEngine):
     def _execute_reader(self, **reader_kwargs):
         """
         execute 方法的子步骤
-        执行 reader
+        执行 reader 方法，建立索引
         """
         # 读取文件，构造 InfoTree
         return self.reader.indexing(**reader_kwargs)
@@ -121,24 +125,23 @@ class TraditionEngine(BaseEngine):
                 info_node.entity_task = temp_task
                 # 4. 添加到任务列表
                 entity_tasks.append(temp_task)
-                # TODO 并发调用llm，并发数在设置中可调整
-
-                # TODO 将结果直接复制反馈到实体对象上
-
         return entity_tasks
 
     def _execute_entity_task(self, tasks: List[BaseTask]):
         """
         execute 方法的子步骤
-        执行实体提取任务
+        执行实体提取任务，事故高发地段
         """
-        from prompt.output_parser import entity_extract_parser
-        # 执行任务
-        if tasks:
-            progress_bar = tqdm(total=len(tasks), desc="Extracting entities")
-            self.llm.execute_task(tasks, mode="async", json_output=True,
-                                  output_parser=entity_extract_parser, progress_bar=progress_bar)
-            progress_bar.close()
+        try:
+            from prompt.output_parser import entity_extract_parser
+            # 执行任务
+            if tasks:
+                progress_bar = tqdm(total=len(tasks), desc="Extracting entities", unit="block")
+                self.llm.execute_task(tasks, mode="async", json_output=True, retry_on_error=True,
+                                      output_parser=entity_extract_parser, progress_bar=progress_bar)
+                progress_bar.close()
+        except Exception as e:
+            raise RuntimeError(f"Failed to execute entity task: {e}")
 
     def _execute_stage_save_1(self, info: InfoForest | BaseStructure):
         """
@@ -146,7 +149,7 @@ class TraditionEngine(BaseEngine):
         阶段性保存
         """
         # 转移实体结果
-        for tree in tqdm(info, desc="Moving entity results"):
+        for tree in tqdm(info, desc="Moving entity results", unit="doc"):
             for node in tree:
                 # 当节点有任务且任务成功时，将任务结果转移至节点实体（虽然没想到什么情况下会没任务，但还是写着先吧）
                 if node.entity_task and node.entity_task.task_status == "SUCCESS":
@@ -167,7 +170,7 @@ class TraditionEngine(BaseEngine):
         阶段性保存
         """
         # 转移实体结果
-        for tree in tqdm(info, desc="Moving relation results"):
+        for tree in tqdm(info, desc="Moving relation results", unit="doc"):
             for node in tree:
                 # 当节点有任务且任务成功时，将任务结果转移至节点实体（要是结点提取失败就会没任务）
                 if node.relation_task and node.relation_task.task_status == "SUCCESS":
@@ -216,7 +219,7 @@ class TraditionEngine(BaseEngine):
         from prompt.output_parser import relation_extract_parser
         # 执行任务
         if tasks:
-            progress_bar = tqdm(total=len(tasks), desc="Extracting relations")
+            progress_bar = tqdm(total=len(tasks), desc="Extracting relations", unit="block")
             self.llm.execute_task(tasks, mode="async", json_output=True,
                                   output_parser=relation_extract_parser, progress_bar=progress_bar)
             progress_bar.close()
@@ -242,7 +245,7 @@ class TraditionEngine(BaseEngine):
         # 创建一个字典来存储每个entity的DataFrame
         entity_dfs = {entity: group for entity, group in grouped}
         # 3 构造二阶段任务
-        for entity_name in tqdm(entity_dfs, desc="Merging and saving duplicated entities"):
+        for entity_name in tqdm(entity_dfs, desc="Merging and saving duplicated entities", unit="item"):
             if entity_dfs[entity_name].shape[0] < 2:
                 unique_df = pd.concat([unique_df, entity_dfs[entity_name]], axis=0)
                 continue
@@ -273,10 +276,22 @@ class TraditionEngine(BaseEngine):
                 # _tree_patch_node(forest, temp_entity_df.loc[j, "source"], temp_entity_df.loc[j, "entity"],
                 #                  temp_task.task_result, temp_task.task_result["name"])
                 # 修改表格信息
-                temp_entity_df.at[i, "attribute"] = temp_task.task_result
-                temp_entity_df.at[i, "source"] = temp_entity_df.loc[i, "source"] + temp_entity_df.loc[j, "source"]
-                # while 循环到末尾，j 递增
-                j += 1
+                if temp_task.task_status == "SUCCESS":
+                    temp_entity_df.at[i, "attribute"] = temp_task.task_result
+                    # 合并 source，并去重
+                    combined_list = list(set(temp_entity_df.loc[i, "source"] + temp_entity_df.loc[j, "source"]))
+                    temp_entity_df.at[i, "source"] = combined_list
+                    # while 循环到末尾，j 递增
+                    j += 1
+                else:
+                    # 任务失败，保存
+                    self._execute_failed_cnt += 1
+                    # 将失败案例写到文件中
+                    try:
+                        with open(f"{self.work_dir}/failed_entity_merge_{self._execute_failed_cnt}.json", "a", encoding="utf-8") as f:
+                            f.write(f"{temp_task.dump_dict()}\n")
+                    except Exception as e:
+                        warnings.warn(f"Failed to save failed entity merge task")
             # 取第一行加入到 unique_df
             unique_df = pd.concat([unique_df, temp_entity_df.iloc[0:1]], axis=0)
         # 4 保存唯一实体表
@@ -284,7 +299,7 @@ class TraditionEngine(BaseEngine):
 
     def _execute_final_relation(self, forest: InfoForest | BaseStructure):
         relation_df = pd.DataFrame(columns=["start", "relation", "target", "attribute", "content"])
-        for tree in tqdm(forest, desc="Saving relations"):
+        for tree in tqdm(forest, desc="Saving relations", unit="doc"):
             for node in tree:
                 if node.relation_task and node.relation_task.task_status == "SUCCESS":
                     # 节点转换、插入实体表
@@ -388,7 +403,7 @@ if __name__ == '__main__':
                              'temperature': 0.1,
                            },
                            json_output=True)
-    task_reader = MarkdownReader(file="test_input", skip_mark="<abd>")
+    task_reader = MarkdownReader(file="input", skip_mark="<abd>")
     engine = TraditionEngine(llm=task_llm, reader=task_reader, struct_type="tree").execute()
     print(f"Process finished, you can check the result in {engine.work_dir}")
     # neo4j_db = GraphNeo4j()
