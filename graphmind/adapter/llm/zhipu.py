@@ -1,5 +1,7 @@
+import os
 import re
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Any, Coroutine
 
 from pydantic import model_validator, Field
@@ -13,6 +15,7 @@ from graphmind.adapter.llm.base import BaseTaskLLM, BaseTextEmbeddings
 import time
 import json
 import asyncio
+
 
 ####################################################################################################
 # Task Model
@@ -65,21 +68,16 @@ class TaskZhipuAI(BaseTaskLLM):
             # 记录晚点要继续的任务
             self._resume_tasks.append(task)
         # 3 结果解析
-        json_output_flag = kwargs.get("json_output", self.json_output)
         try:
-            if json_output_flag:
-                task.task_result = _parse_to_json(task.task_output)
-            # 如果有自定义的输出解析器
-            if kwargs.get("output_parser"):
-                task.task_result = kwargs.get("output_parser")(task.task_result)
+            task.task_result = _llm_output_parser(task.task_output, engine_json_output=self.json_output, **kwargs)
             task.task_status = "SUCCESS"
-            # 进度条递增
-            if self._progress_bar:
-                self._progress_bar.update(1)
         except UserWarning:
             warnings.warn(f"Failed to parse : {task.task_output}")
             task.task_status = "PARSING_FAILED"
             task.task_result = {"output": task.task_output, "result": task.task_result}
+        # 进度条递增
+        if self._progress_bar:
+            self._progress_bar.update(1)
         return task
 
     def _sync_execute(self, task: BaseTask | List[BaseTask], **kwargs) -> BaseTask | List[BaseTask]:
@@ -91,26 +89,29 @@ class TaskZhipuAI(BaseTaskLLM):
             return task
 
     async def _async_submit_single(self, task: BaseTask, **kwargs):
+        # 准备请求对象和信息
         client = self._zhipu_client
+        task_messages = [
+            {"role": "system", "content": task.task_system_prompt},
+            {"role": "user", "content": task.task_user_prompt},
+        ]
         # 异步、任务式请求
         response = client.chat.asyncCompletions.create(
             model=self.llm_name,
-            messages=[
-                {"role": "system", "content": task.task_system_prompt},
-                {"role": "user", "content": task.task_user_prompt},
-            ],
+            messages=task_messages,
             temperature=kwargs.get("temperature") or self.llm_kwargs.get("temperature") or 0.1,
         )
         task.task_id = response.id
         return task
 
     async def _async_collect_single(self, task: BaseTask, **kwargs):
+        # 准备请求对象和信息
         client = self._zhipu_client
-        # 等待异步任务完成
+        # 1 等待异步任务完成
         temp_response = None
         temp_task_status = "PROCESSING"
         while temp_task_status != "SUCCESS":
-            time.sleep(2)
+            await asyncio.sleep(1.5)
             if temp_task_status == "FAILED":
                 warnings.warn(f"Task {task.task_id} failed!")
                 temp_response = {
@@ -120,16 +121,11 @@ class TaskZhipuAI(BaseTaskLLM):
             temp_response = client.chat.asyncCompletions.retrieve_completion_result(task.task_id)
             temp_task_status = temp_response.task_status
         task.task_output = temp_response.choices[0].message.content
-        # 如果需要解析为json
-        json_output_flag = kwargs.get("json_output", self.json_output)
+        # 2 处理重试和继续
+        self._task_retry_resume(task, mode=temp_response.choices[0].finish_reason, **kwargs)
+        # 3 结果解析
         try:
-            if json_output_flag:
-                task.task_result = _parse_to_json(task.task_output)
-            # 如果有自定义的输出解析器
-            if kwargs.get("output_parser") and json_output_flag:
-                task.task_result = kwargs.get("output_parser")(task.task_result)
-            elif kwargs.get("output_parser"):
-                task.task_result = kwargs.get("output_parser")(task.task_output)
+            task.task_result = _llm_output_parser(task.task_output, engine_json_output=self.json_output, **kwargs)
             task.task_status = "SUCCESS"
         except UserWarning:
             warnings.warn(f"Failed to parse : {task.task_output}")
@@ -146,19 +142,77 @@ class TaskZhipuAI(BaseTaskLLM):
             result = await self._async_collect_single(tasks, **kwargs)
             return result
         elif isinstance(tasks, List):
-            # 创建任务列表来异步执行提交操作
-            submit_tasks = [self._async_submit_single(task, **kwargs) for task in tasks]
-            # 等待所有提交操作完成
+            # 创建一个信号量，限制并发数量为5
+            semaphore = asyncio.Semaphore(int(os.getenv("THREADS_NUM", 5)))
+            # 设定任务函数
+            async def submit_with_semaphore(task):
+                async with semaphore:
+                    return await self._async_submit_single(task, **kwargs)
+            # 并发执行所有提交任务
+            submit_tasks = [submit_with_semaphore(task) for task in tasks]
             await asyncio.gather(*submit_tasks)
-            # 创建任务列表来异步执行收集操作
-            collect_tasks = [self._async_collect_single(task, **kwargs) for task in tasks]
-            # 等待所有收集操作完成并获取结果
+            # 设定任务函数
+            async def collect_with_semaphore(task):
+                async with semaphore:
+                    return await self._async_collect_single(task, **kwargs)
+            # 并发执行所有收集任务
+            collect_tasks = [collect_with_semaphore(task) for task in tasks]
             results = await asyncio.gather(*collect_tasks)
             return results
 
-def _create_conversation(client: ZhipuAI, messages: List[dict], mode: str) -> dict:
-    # 多轮对话
-    pass
+    def _task_retry_resume(self,
+                           task: BaseTask,
+                           mode: str,
+                           retry_on_error: bool = False,
+                           **kwargs):
+        """
+        处理任务的重试和继续，默认情况下不会开启该服务，需要用户调用execute_task时设置retry_on_err=True
+        mode: stop(async/sync) | length(async/sync) | network_error(sync) | sensitive(sync) | tool_calls(sync)
+        """
+        if not retry_on_error or mode == "stop":
+            return
+        if mode in ["length"]:
+            client = self._zhipu_client
+            history_msg = [
+                {"role": "system", "content": task.task_system_prompt},
+                {"role": "user", "content": task.task_user_prompt},
+                {"role": "assistant", "content": task.task_output},
+            ]
+            temp_output = task.task_output
+            # 继续发送任务请求
+            while True:
+                # 1 发出请求
+                history_msg.append({"role": "user", "content": "请你继续直接接着上一句话。"})
+                client = client
+                response = client.chat.completions.create(
+                    model=self.llm_name,
+                    messages=history_msg,
+                    temperature=kwargs.get("temperature") or self.llm_kwargs.get("temperature") or 0.1,
+                )
+                # 2 获取结果
+                temp_output += response.choices[0].message.content  # 文本结果
+                # 3 检查是否完成
+                if response.choices[0].finish_reason != 'length':
+                    break
+                # 4 准备下一轮对话，将上一次的回复作为新的系统提示，并添加用户提示
+                history_msg.append({"role": "assistant", "content": response.choices[0].message.content})
+                history_msg.append({"role": "user", "content": "请你继续直接接着上一句话。"})
+            return task
+
+
+def _llm_output_parser(raw_str: str, **kwargs) -> Any:
+    ret = None
+    json_output_flag = kwargs.get("json_output", kwargs.get("engine_json_output"))
+    if json_output_flag:
+        try:
+            ret = _parse_to_json(raw_str)
+        except UserWarning:
+            # 尝试修复json字符串
+            raw_str = raw_str.replace("\n", "").replace(" ", "")
+    # 如果有自定义的输出解析函数
+    if kwargs.get("output_parser"):
+        ret = kwargs.get("output_parser")(ret or raw_str)
+    return ret
 
 
 def _parse_to_json(raw_str: str) -> dict:
@@ -190,6 +244,28 @@ def _extract_json_code_block(raw_str: str):
     # Find all matches
     matches = pattern.findall(raw_str)
     return json.loads(matches[0])
+
+
+def _refined_fix_json(json_string):
+    parts = json_string.split('},')
+    valid_parts = []
+
+    for part in parts:
+        # Try to fix incomplete JSON objects by adding missing closing braces
+        if not part.endswith('}'):
+            part += '}'
+
+        try:
+            # Check if the part is a valid JSON object
+            json_obj = json.loads(part)
+            if json_obj not in valid_parts:  # Check for duplicates
+                valid_parts.append(json_obj)
+        except json.JSONDecodeError:
+            # If it's not a valid JSON object, we skip it
+            continue
+
+    # Convert the list of valid JSON objects back to a JSON string
+    return json.dumps(valid_parts)
 
 
 ####################################################################################################
