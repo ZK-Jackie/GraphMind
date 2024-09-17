@@ -8,6 +8,24 @@ class BaseStructure(BaseModel, ABC):
     def get_index(self):
         pass
 
+    @abstractmethod
+    def dump_json(self):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def from_json(file_path: str):
+        pass
+
+    @abstractmethod
+    def dump_pickle(self, file_path: str):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def from_pickle(file_path: str):
+        pass
+
 
 class BaseTaskResult(BaseModel, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True)

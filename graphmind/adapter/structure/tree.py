@@ -1,3 +1,5 @@
+import json
+import pickle
 from typing import List, Iterator, Any
 
 from pydantic import Field, ConfigDict
@@ -67,6 +69,25 @@ class InfoNode:
         for child in self.children:
             yield from child
 
+    def dump_dict(self):
+        return {
+            "title": self.title,
+            "content": self.content,
+            "level": self.level,
+            "children": [child.dump_dict() for child in self.children]
+        }
+
+    @staticmethod
+    def from_dict(data: dict):
+        title = data.get("title")
+        content = data.get("content")
+        level = data.get("level")
+        children = data.get("children")
+        node = InfoNode(title=title, content=content, level=level)
+        for child in children:
+            node.add_child(InfoNode.from_dict(child))
+        return node
+
 
 class InfoTree:
     main_root: InfoNode | None = None
@@ -111,6 +132,14 @@ class InfoTree:
             # 如果当前节点的 level 小于 root 的 level，向上回溯
             self.insert_node(root.parent, node, node_level)
 
+    def dump_dict(self):
+        final_dict = {"main_root": self.main_root.dump_dict()}
+        return final_dict
+
+    def from_dict(self, data: dict):
+        self.main_root = InfoNode.from_dict(data.get("main_root"))
+        return self
+
     @staticmethod
     def _is_dup_children(root: InfoNode, node: InfoNode) -> (bool, InfoNode | None):
         for child in root.children:
@@ -146,6 +175,36 @@ class InfoForest(BaseStructure):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     """pydantic 配置：允许任意类型"""
+
+    def dump_json(self):
+        final_dict = {
+            "title": self.title,
+            "trees": [tree.dump_dict() for tree in self.trees]
+        }
+        return final_dict
+
+    @staticmethod
+    def from_json(file_path: str):
+        raw = json.load(open(file_path, "r"))
+        forest = InfoForest()
+        for tree in raw:
+            forest.trees.append(InfoTree().from_dict(tree))
+        return forest
+
+    def dump_pickle(self, file_path: str):
+        pickle.dump(self, open(file_path, "wb"))
+
+    @staticmethod
+    def from_pickle(file_path: str):
+        return pickle.load(open(file_path, "rb"))
+
+
+
+    def dump_dict(self):
+        return {
+            "title": self.title,
+            "trees": [tree.dump_dict() for tree in self.trees]
+        }
 
     def add_tree(self, tree: InfoTree):
         self.trees.append(tree)
