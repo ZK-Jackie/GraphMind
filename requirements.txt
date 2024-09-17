@@ -15,5 +15,7 @@ zhipuai==2.1.4.20230814
 neo4j==5.23.0
 pandas==2.2.2
 # requirements-graphrag.txt
-graphrag==0.3.4
+graphrag==0.3.3
 # tenacity==8.5.0
+jinja2==3.1.4
+pyyaml==6.0.2
