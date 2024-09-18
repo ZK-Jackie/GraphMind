@@ -1,3 +1,6 @@
+"""
+GraphMind Structure module root.
+"""
 from graphmind.adapter.structure.base import BaseStructure, BaseTaskResult, BaseTask
 
 

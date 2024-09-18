@@ -1,9 +1,9 @@
 import os
 import re
 import warnings
-from concurrent.futures import ThreadPoolExecutor
 from typing import List, Any, Coroutine
-
+import json
+import asyncio
 from pydantic import model_validator, Field
 from tqdm import tqdm
 
@@ -11,10 +11,6 @@ from zhipuai import ZhipuAI
 
 from graphmind.adapter.structure.base import BaseTask
 from graphmind.adapter.llm.base import BaseTaskLLM, BaseTextEmbeddings
-
-import time
-import json
-import asyncio
 
 
 ####################################################################################################
@@ -192,8 +188,9 @@ class TaskZhipuAI(BaseTaskLLM):
                 # 2 获取结果
                 temp_output += response.choices[0].message.content  # 文本结果
                 # 3 检查是否完成
-                if response.choices[0].finish_reason != 'length':
-                    break
+                #if response.choices[0].finish_reason != 'length':
+                task.task_output = temp_output
+                break
                 # 4 准备下一轮对话，将上一次的回复作为新的系统提示，并添加用户提示
                 history_msg.append({"role": "assistant", "content": response.choices[0].message.content})
                 history_msg.append({"role": "user", "content": "请你继续直接接着上一句话。"})

@@ -1,6 +1,3 @@
-import numpy as np
-from cffi.setuptools_ext import error
-
 from graphmind.adapter.database import BaseGraphDatabase
 
 

@@ -14,6 +14,8 @@ langchainhub==0.1.20
 zhipuai==2.1.4.20230814
 neo4j==5.23.0
 pandas==2.2.2
+numpy==1.26.4
+openpyxl==3.1.5
 # requirements-graphrag.txt
 graphrag==0.3.3
 # tenacity==8.5.0

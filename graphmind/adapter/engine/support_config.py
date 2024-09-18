@@ -1,12 +1,16 @@
-# Type Strings
-tree_type = ["tree", "info_tree", "Tree", "InfoTree"]
-raw_type = ["raw", "Raw", "RAW"]
+# GraphMind File Structure
+tree_type = ["TREE"]
+raw_type = ["RAW"]
 
 
-# Supported information structure types
-TRADITION_ENGINE_SUPPORT = tree_type
-TRADITION_FILE_SUPPORT = ["md"]
+# GraphMind Engine File Support and Structure Support
+HIERARCHY_STRUCT_SUPPORT = tree_type
+HIERARCHY_FILE_SUPPORT = ["md"]
 
 
-GRAPHRAG_ENGINE_SUPPORT = raw_type
-GRAPHRAG_FILE_SUPPORT = ["md", "txt", "csv"]
+CHUNK_STRUCT_SUPPORT = raw_type
+CHUNK_FILE_SUPPORT = ["md", "txt", "csv"]
+
+
+CASCADE_STRUCT_SUPPORT = raw_type + tree_type
+CASCADE_FILE_SUPPORT = ["md", "txt", "csv"]

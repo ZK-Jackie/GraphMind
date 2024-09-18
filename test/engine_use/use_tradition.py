@@ -1,22 +1,19 @@
 import os
 
-from graphmind.adapter.database import GraphNeo4j
-from graphmind.adapter.engine import TraditionEngine
+from graphmind.adapter.engine.hierarchy import TraditionEngine
 from graphmind.adapter.llm import TaskZhipuAI
 from graphmind.utils.text_reader.markdown import MarkdownReader
 
 if __name__ == '__main__':
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    # 方式1
-    task_llm = TaskZhipuAI(llm_name=os.getenv("ZHIPU_LLM_NAME"), api_key=os.getenv("ZHIPU_API_KEY"))
-    task_reader = MarkdownReader(file="ch1.md", skip_mark="<abd>")
-    engine = TraditionEngine(llm=task_llm, reader=task_reader).execute()
+    task_llm = TaskZhipuAI(llm_name=os.getenv("ZHIPU_LLM_NAME"),
+                           api_key=os.getenv("ZHIPU_API_KEY"),
+                           llm_kwargs={
+                               'temperature': 0.1,
+                           },
+                           json_output=True)
+    task_reader = MarkdownReader(file="input", skip_mark="<abd>")
+    # 此处可给单个文件路径、文件路径列表、装有文件的文件夹路径
+    # 此处可以设定若某段文本包含某个标记（这里设为<abd>）则跳过读取该段。若设定的是标题，则跳过整个章节
+    engine = TraditionEngine(llm=task_llm, reader=task_reader, struct_type="tree").execute()
+    # 此处就暂时固定是这样写，别的还没做
     print(f"Process finished, you can check the result in {engine.work_dir}")
-    neo4j_db = GraphNeo4j()
-    engine.persist_db(neo4j_db)
-
-    # 方式2
-    neo4j_db = GraphNeo4j()
-    neo4j_db.persist_work_dir("work_dir/20240903203841")

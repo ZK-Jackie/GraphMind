@@ -1,11 +1,9 @@
 from typing_extensions import Self
 from abc import ABC, abstractmethod
-
 from pydantic import BaseModel, Field, model_validator
 
 import os
 import time
-import pandas as pd
 
 from graphmind.adapter.database import BaseGraphDatabase
 from graphmind.adapter.llm.base import BaseTaskLLM, BaseTextEmbeddings
@@ -13,8 +11,11 @@ from graphmind.utils.text_reader.base import BaseReader
 
 
 class BaseEngine(BaseModel, ABC):
-    work_dir: str = Field(default=f"{os.getcwd()}/work_dir/{time.strftime('%Y%m%d%H%M%S')}")
-    """工作、缓存路径"""
+    work_id: str = Field(description="Work Id", default=f"{time.strftime('%Y%m%d%H%M%S')}")
+    """工作 ID"""
+
+    work_dir: str = Field(description="Work directory", default=None)
+    """工作、缓存路径，在validate_workdir中会初始化"""
 
     resume: bool = Field(default=False)
     """是否继续上次的任务"""
@@ -37,10 +38,12 @@ class BaseEngine(BaseModel, ABC):
     @model_validator(mode="after")
     def validate_workdir(self) -> Self:
         """验证工作目录"""
+        self.work_dir = f"{os.getcwd()}/work_dir/{self.work_id}"
         # 检查工作目录是否存在
         if not os.path.exists(self.work_dir):
             os.makedirs(self.work_dir, exist_ok=True)
         else:
+            print("History work directory detected")
             self.resume = True
         return self
 
@@ -87,8 +90,6 @@ class BaseEntity(BaseModel):
         return temp_str
 
 
-
-
 class BaseRelation(BaseModel):
     start: str | None = Field(description="Start node name", default=None)
     """开始节点名字"""
@@ -107,7 +108,6 @@ class BaseRelation(BaseModel):
 
     source: list | str | None = Field(description="Entity source", default=None)
     """关系来源"""
-
 
     def dump_dict(self):
         return {
