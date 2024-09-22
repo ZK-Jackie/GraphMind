@@ -12,3 +12,6 @@ TODO List:
     - Query type
     - Query aim
 """
+from .base import BaseQA
+
+__all__ = ["BaseQA"]
