@@ -5,12 +5,12 @@ import time
 ###################################
 #           一、前期准备            #
 ###################################
-GRAPHRAG_FOLDER = "DiscreteMath"
+GRAPHRAG_FOLDER = "D:\\Projects\\PycharmProjects\\GraphMind\\test\\result\\glm-4-plus-graphrag"
 
 NEO4J_URI="bolt://localhost:7687"
 NEO4J_USERNAME="neo4j"
 NEO4J_PASSWORD="password"
-NEO4J_DATABASE="discretemath"
+NEO4J_DATABASE="discrete-math-graphrag"
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
 # 工具函数
@@ -82,14 +82,14 @@ entity_df = pd.read_parquet(f'{GRAPHRAG_FOLDER}/create_final_entities.parquet',
                             columns=["name","type","description","human_readable_id","id","description_embedding","text_unit_ids"])
 entity_df.head(2)
 entity_statement = """  
-MERGE (e:__Entity__ {id:value.id})  
-SET e += value {.human_readable_id, .description, name:replace(value.name,'"','')}  
-WITH e, value  
-CALL db.create.setNodeVectorProperty(e, "description_embedding", value.description_embedding)  
-CALL apoc.create.addLabels(e, case when coalesce(value.type,"") = "" then [] else [apoc.text.upperCamelCase(replace(value.type,'"',''))] end) yield node  
-UNWIND value.text_unit_ids AS text_unit  
-MATCH (c:__Chunk__ {id:text_unit})  
-MERGE (c)-[:HAS_ENTITY]->(e)  
+    MERGE (e:__Entity__ {id:value.id})  
+    SET e += value {.human_readable_id, .description, name:replace(value.name,'"','')}  
+    WITH e, value  
+    CALL db.create.setNodeVectorProperty(e, "description_embedding", value.description_embedding)  
+    CALL apoc.create.addLabels(e, case when coalesce(value.type,"") = "" then [] else [apoc.text.upperCamelCase(replace(value.type,'"',''))] end) yield node  
+    UNWIND value.text_unit_ids AS text_unit  
+    MATCH (c:__Chunk__ {id:text_unit})  
+    MERGE (c)-[:HAS_ENTITY]->(e)  
 """
 batched_import(entity_statement, entity_df)
 
@@ -149,9 +149,3 @@ batched_import(rel_statement, rel_df)
 # SET f += finding
 # """
 # batched_import(community_statement, community_report_df)
-
-
-
-
-
-

@@ -2,8 +2,6 @@ from graphmind.adapter.database import BaseGraphDatabase
 
 
 class GraphChaoxing(BaseGraphDatabase):
-    def __init__(self, config):
-        pass
 
     def search(self, query):
         pass
