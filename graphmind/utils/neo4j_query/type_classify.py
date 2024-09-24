@@ -2,7 +2,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
-import prompts.classify as prompts
+from graphmind.utils.neo4j_query.prompts import classify as prompts
 
 
 class QueryTypeResult:

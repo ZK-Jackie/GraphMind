@@ -229,7 +229,7 @@ class OverallNodeTemplate:
         cypher_queries = OverallNodeTemplate.build_overall_queries(entity_list)
         # 2 执行查询 有一种狗血结果是查询结果为空 此时要注意返回 None
         raw_result_list = asyncio.run(database.batch(cypher_queries))
-        if len(raw_result_list[0]) == 0:
+        if raw_result_list is None or raw_result_list[0] is None or len(raw_result_list) == 0:
             return "None"
         # 3 结果解析
         result_list = []
