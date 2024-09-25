@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package graphmind.grpc.chat_service;
+
+/*  build command:
+    python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. chat_service.proto
+ */
+
+enum Role {
+  // 用户
+  USER = 0;
+  // AI
+  AI = 1;
+}
+
+// 定义输入聊天消息
+message ChatMessage {
+  // 当前信息发送角色
+  Role role = 1;
+  // 消息内容
+  string content = 2;
+  // 是否分块传输
+  bool chunkResp = 3;
+  // 用户 ID
+  string userId = 4;
+  // 对话 ID
+  string convId = 5;
+  // 消息 ID
+  string messageId = 6;
+}
+
+// 定义聊天服务
+service ChatService {
+  // Java 流式获取 AI 消息
+  rpc stream(ChatMessage) returns (stream ChatMessage) {}
+  // Java 非流式获取 AI 消息
+  rpc invoke(ChatMessage) returns (ChatMessage) {}
+}

@@ -1,8 +1,8 @@
-import os
 from typing import Generator
+from typing_extensions import Self
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from dotenv import load_dotenv
 
 from langchain_core.output_parsers import StrOutputParser
@@ -11,10 +11,10 @@ from langchain_core.runnables import RunnableWithMessageHistory, ConfigurableFie
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_redis import RedisChatMessageHistory
 
-import prompts.rag as prompts
+from graphmind.service.prompts import rag as prompts
 from graphmind.adapter.database import GraphNeo4j
-from graphmind.service.base import ChatMessage
-from graphmind.service.config import RedisConfig
+from graphmind.service.base import ChatMessage, RoleEnum
+from graphmind.service.config.redis import RedisConfig
 from graphmind.utils.neo4j_query.graph_qa import get_graph_context
 
 load_dotenv()
@@ -24,10 +24,17 @@ class GraphChat(BaseModel):
     llm: ChatOpenAI | None = Field(description="OpenAI chat model", default=None)
     embeddings: OpenAIEmbeddings | None = Field(description="OpenAI embeddings model", default=None)
     database: GraphNeo4j | None = Field(description="Graph database connection information", default=None)
+    mode: str = Field(description="Mode of the chatbot, `agent` or `chain`", default="agent")
+
+    chain_with_history: RunnableWithMessageHistory | None = Field(description="Chat chain with message history",
+                                                                  default=None)
+    agent_with_history: RunnableWithMessageHistory | None = Field(description="Agent chain with message history",
+                                                                  default=None)
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    @property
-    def chain_with_history(self) -> RunnableWithMessageHistory:
+    @model_validator(mode="after")
+    def create_chain(self) -> Self:
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", prompts.system_prompt),
@@ -37,7 +44,7 @@ class GraphChat(BaseModel):
         )
         parser = StrOutputParser()
         chain = prompt | self.llm | parser
-        return RunnableWithMessageHistory(
+        self.chain_with_history = RunnableWithMessageHistory(
             chain,  # LLMChain
             _get_message_history,  # MessageHistory
             input_messages_key="input",  # Input key in prompt template
@@ -61,6 +68,7 @@ class GraphChat(BaseModel):
                 ),
             ],
         )
+        return self
 
     def invoke(self, message: ChatMessage) -> ChatMessage:
         ai_message = ChatMessage(
@@ -86,7 +94,7 @@ class GraphChat(BaseModel):
 
     def stream(self, message: ChatMessage) -> Generator[ChatMessage, None, None]:
         ai_message = ChatMessage(
-            role=1,
+            role=RoleEnum.AI.value,
             content="",
             chunk_resp=message.chunk_resp,
             user_id=message.user_id,
