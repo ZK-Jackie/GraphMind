@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from graphmind.adapter.database import GraphNeo4j
 from graphmind.service.base import ChatMessage
-from graphmind.service.chat import GraphChat
+from graphmind.service.chain import GraphChain
 
 if __name__ == "__main__":
     llm = ChatOpenAI(
@@ -25,7 +25,7 @@ if __name__ == "__main__":
         password=os.getenv("NEO4J_PASSWORD"),
         database=os.getenv("NEO4J_DATABASE")
     )
-    chat = GraphChat(llm=llm, embeddings=embeddings, database=database)
+    chat = GraphChain(llm=llm, embeddings=embeddings, database=database)
     test_message = ChatMessage(
         role=0,
         content="我刚才说了什么？",

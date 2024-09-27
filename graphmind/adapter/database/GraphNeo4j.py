@@ -24,7 +24,7 @@ class GraphNeo4j(BaseGraphDatabase):
                 return self
             else:
                 warnings.warn(f"Neo4j connection failed.")
-                raise e
+                raise RuntimeError("Neo4j connection failed.")
         return self
 
     def query(self, query: str) -> list[dict] | None:

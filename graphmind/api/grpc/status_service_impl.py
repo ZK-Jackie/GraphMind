@@ -2,7 +2,7 @@ import grpc
 from concurrent import futures
 import warnings
 import os
-from graphmind.grpc.status_service import status_service_pb2, status_service_pb2_grpc
+from graphmind.api.grpc.status_service import status_service_pb2, status_service_pb2_grpc
 
 AIM_HOST = os.getenv("JAVA_HOST") + ":" + os.getenv("JAVA_GRPC_PORT")
 

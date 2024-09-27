@@ -1,4 +1,4 @@
-from graphmind.utils.neo4j_query.cypher_query import CypherResult
+from graphmind.utils.neo4j_query.base import CypherResult
 from graphmind.utils.neo4j_query.entity_extract import EntityExtractResult
 
 

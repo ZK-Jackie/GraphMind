@@ -11,7 +11,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from graphmind.utils.neo4j_query.prompts import entity as prompts
 from graphmind.adapter.database import GraphNeo4j
-from graphmind.utils.neo4j_query.cypher_query import CypherResult
+from graphmind.utils.neo4j_query.base import CypherResult
 from graphmind.utils.neo4j_query.cyphers.cypher_template import EntityEnsureTemplate
 
 QUERY_TYPE = ["single", "multi", "overall"]

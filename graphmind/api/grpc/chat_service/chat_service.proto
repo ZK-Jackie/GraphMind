@@ -32,7 +32,9 @@ message ChatMessage {
 // 定义聊天服务
 service ChatService {
   // Java 流式获取 AI 消息
-  rpc stream(ChatMessage) returns (stream ChatMessage) {}
+  rpc stream(ChatMessage) returns (stream ChatMessage) {
+    // 定义 Http 接口
+  }
   // Java 非流式获取 AI 消息
   rpc invoke(ChatMessage) returns (ChatMessage) {}
 }

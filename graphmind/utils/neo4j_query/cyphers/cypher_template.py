@@ -3,7 +3,7 @@ import json
 
 from graphmind.adapter.database import GraphNeo4j
 from graphmind.utils.dict_list_remove_dup import dict_list_remove_dup
-from graphmind.utils.neo4j_query.cypher_query import CypherResult, RelatedNode
+from graphmind.utils.neo4j_query.base import CypherResult, RelatedNode
 
 IGNORE_ATTRIBUTE = ['name', 'description', 'nameEmbeddings', 'description_embedding', "id", "human_readable_id", "uid"]
 

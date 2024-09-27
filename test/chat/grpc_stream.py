@@ -1,7 +1,7 @@
 # 测试stream接口
 import grpc
 
-from graphmind.grpc.chat_service import chat_service_pb2_grpc, chat_service_pb2
+from graphmind.api.grpc.chat_service import chat_service_pb2_grpc, chat_service_pb2
 
 if __name__ == '__main__':
     with grpc.insecure_channel('localhost:50051') as channel:
