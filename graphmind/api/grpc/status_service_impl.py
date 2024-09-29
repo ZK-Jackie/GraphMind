@@ -3,8 +3,10 @@ from concurrent import futures
 import warnings
 import os
 from graphmind.api.grpc.status_service import status_service_pb2, status_service_pb2_grpc
+from graphmind.service.base import ProcessStatus
 
 AIM_HOST = os.getenv("JAVA_HOST") + ":" + os.getenv("JAVA_GRPC_PORT")
+
 
 class StatusServiceImpl(status_service_pb2_grpc.StatusServiceServicer):
     def control(self, request, context):
@@ -27,12 +29,13 @@ class StatusServiceImpl(status_service_pb2_grpc.StatusServiceServicer):
         warnings.warn(f"Unexpected receive from report: {request}")
         return status_service_pb2.Empty()
 
-def report(chat_status: dict):
+
+def report(chat_status: ProcessStatus):
     """
     向目标回报状态信息
     """
     try:
-        send_obj = status_service_pb2.ChatStatus(**chat_status)
+        send_obj = status_service_pb2.ProcessStatus(**chat_status.model_dump(by_alias=True))
     except Exception as e:
         raise Exception(f"Failed to convert chat_status to gRPC message object ChatStatus: {e}")
     with grpc.insecure_channel(AIM_HOST) as channel:
@@ -40,6 +43,18 @@ def report(chat_status: dict):
         response = stub.report(send_obj)
         if response:
             warnings.warn(f"When reporting status, unexpected receive: {response}")
+
+
+def _message_to_model(message: status_service_pb2.ProcessStatus):
+    # return ProcessStatus(**message)
+    return ProcessStatus(
+        user_id=message.userId,
+        conv_id=message.convId,
+        user_message_id=message.userMessageId,
+        status_id=message.statusId,
+        status_message=message.statusMessage,
+        send_time=message.sendTime
+    )
 
 
 if __name__ == '__main__':

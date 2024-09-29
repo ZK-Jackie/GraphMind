@@ -37,12 +37,12 @@ class StatusServiceStub(object):
         """
         self.report = channel.unary_unary(
                 '/graphmind.grpc.status_service.StatusService/report',
-                request_serializer=status__service__pb2.ChatStatus.SerializeToString,
+                request_serializer=status__service__pb2.ProcessStatus.SerializeToString,
                 response_deserializer=status__service__pb2.Empty.FromString,
                 _registered_method=True)
         self.control = channel.unary_unary(
                 '/graphmind.grpc.status_service.StatusService/control',
-                request_serializer=status__service__pb2.ChatStatus.SerializeToString,
+                request_serializer=status__service__pb2.ProcessStatus.SerializeToString,
                 response_deserializer=status__service__pb2.Empty.FromString,
                 _registered_method=True)
 
@@ -70,12 +70,12 @@ def add_StatusServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'report': grpc.unary_unary_rpc_method_handler(
                     servicer.report,
-                    request_deserializer=status__service__pb2.ChatStatus.FromString,
+                    request_deserializer=status__service__pb2.ProcessStatus.FromString,
                     response_serializer=status__service__pb2.Empty.SerializeToString,
             ),
             'control': grpc.unary_unary_rpc_method_handler(
                     servicer.control,
-                    request_deserializer=status__service__pb2.ChatStatus.FromString,
+                    request_deserializer=status__service__pb2.ProcessStatus.FromString,
                     response_serializer=status__service__pb2.Empty.SerializeToString,
             ),
     }
@@ -105,7 +105,7 @@ class StatusService(object):
             request,
             target,
             '/graphmind.grpc.status_service.StatusService/report',
-            status__service__pb2.ChatStatus.SerializeToString,
+            status__service__pb2.ProcessStatus.SerializeToString,
             status__service__pb2.Empty.FromString,
             options,
             channel_credentials,
@@ -132,7 +132,7 @@ class StatusService(object):
             request,
             target,
             '/graphmind.grpc.status_service.StatusService/control',
-            status__service__pb2.ChatStatus.SerializeToString,
+            status__service__pb2.ProcessStatus.SerializeToString,
             status__service__pb2.Empty.FromString,
             options,
             channel_credentials,

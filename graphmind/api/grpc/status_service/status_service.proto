@@ -6,6 +6,9 @@ package graphmind.grpc.status_service;
     python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. status_service.proto
  */
 enum StatusId {
+  /***
+   * 处理状态类
+   ***/
   // 未处理
   UNPROCESS = 0;
   // 正在处理
@@ -18,12 +21,16 @@ enum StatusId {
   TIMEOUT = 4;
   // 处理中断
   CANCELLED = 5;
-  // 停止处理（一般由 Java 端发送）
+
+  /***
+   * 控制处理类
+   ***/
+  // 停止处理（由 Java 端向 Python 端发送）
   STOP = 10;
 }
 
 // 定义当前处理状态信息
-message ChatStatus {
+message ProcessStatus {
   // 用户 ID
   string userId = 1;
   // 对话 ID
@@ -43,7 +50,7 @@ message Empty {}
 // 定义状态发送、状态控制服务
 service StatusService {
   // 发送当前处理状态信息（理解：python 汇报处理状态，提供 ChatProcessStat，但 Java 端只需返回空）
-  rpc report (ChatStatus) returns (Empty) {}
+  rpc report (ProcessStatus) returns (Empty) {}
   // 接受状态控制信息（理解：Java 端发送控制信息，提供 ChatProcessStat，python 端只需返回空，晚点再返回一个 Report）
-  rpc control (ChatStatus) returns (Empty) {}
+  rpc control (ProcessStatus) returns (Empty) {}
 }

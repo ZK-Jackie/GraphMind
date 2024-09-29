@@ -1,5 +1,9 @@
+import time
+import functools
 from enum import Enum
 from pydantic import BaseModel, Field
+
+from graphmind.service.reporter import BaseReporter
 
 
 class RoleEnum(Enum):
@@ -65,25 +69,36 @@ class StatusEnum(Enum):
     """控制信号：停止"""
 
 
-class ChatProcessStat(BaseModel):
+class ProcessStatus(BaseModel):
     """
     由 AI 端向 Java 端单向传输的状态汇报消息
     """
 
-    user_id: str | None = Field(description="User ID", default=None)
+    user_id: str | None = Field(description="User ID", alias="userId", default=None)
     """用户ID"""
 
-    conv_id: str | None = Field(description="Chat ID", default=None)
+    conv_id: str | None = Field(description="Chat ID", alias="convId", default=None)
     """对话ID"""
 
-    user_message_id: str | None = Field(description="User message ID", default=None)
+    user_message_id: str | None = Field(description="User message ID", alias="userMessageId", default=None)
     """处理的用户消息ID"""
 
-    status_id: int | None = Field(description="Status ID", default=None)
+    status_id: int | None = Field(description="Status ID", alias="statusId", default=None)
     """当前处理状态ID，0-未处理，1-处理中，2-处理完成"""
 
-    status_message: str | None = Field(description="Status message", default=None)
+    status_message: str | None = Field(description="Status message", alias="statusMessage", default=None)
     """当前处理状态消息"""
 
-    send_time: str | None = Field(description="Send time", default=None)
+    send_time: str | None = Field(description="Send time", alias="sendTime", default=None)
     """当前处理状态信号发送时间，即发送信息的这个状态的开始时间，也是上一个状态的结束时间"""
+
+
+def log_report(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"开始执行 {func.__name__}")
+        result = func(*args, **kwargs)  # 执行原函数
+        print(f"{func.__name__} 执行完毕")
+        return result
+
+    return wrapper
