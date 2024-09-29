@@ -79,6 +79,23 @@ class SingleNodeTemplate:
         return json.dumps({"nodes": result_json},
                           ensure_ascii=False, indent=2)
 
+    @staticmethod
+    async def a_run_cypher_query(database: GraphNeo4j, entity_list: list[str]) -> str:
+        # 1 构造查询
+        cypher_queries = SingleNodeTemplate.build_singlenode_queries(entity_list)
+        # 2 执行查询
+        raw_result_list = await database.batch(cypher_queries)
+        # 3 结果解析
+        result_list = []
+        for i in range(len(raw_result_list)):
+            result_list.extend(SingleNodeTemplate.cypher_result_parser(raw_result_list[i]))
+        # 4 构造结果prompt
+        result_json = []
+        for result in result_list:
+            result_json.append(SingleNodeTemplate.get_result_prompt(result))
+        return json.dumps({"nodes": result_json},
+                          ensure_ascii=False, indent=2)
+
 
 class MultiNodeTemplate:
     relationship_path_template = """
@@ -163,6 +180,20 @@ class MultiNodeTemplate:
         # 4 构造结果prompt
         return MultiNodeTemplate.get_result_prompt(result_list)
 
+    @staticmethod
+    async def a_run_cypher_query(database: GraphNeo4j, entity_list: list[str]) -> str:
+        # 1 构造查询
+        cypher_queries = MultiNodeTemplate.build_multinode_queries(entity_list)
+        # 2 执行查询
+        raw_result_list = await database.batch(cypher_queries)
+        # 3 结果解析
+        result_list = []
+        for i in range(len(raw_result_list)):
+            # 对于每一句cypher查出的结果进行转化
+            result_list.extend(MultiNodeTemplate.cypher_result_parser(raw_result_list[i]))
+        # 4 构造结果prompt
+        return MultiNodeTemplate.get_result_prompt(result_list)
+
 
 class OverallNodeTemplate:
     all_links_template = """
@@ -229,6 +260,24 @@ class OverallNodeTemplate:
         cypher_queries = OverallNodeTemplate.build_overall_queries(entity_list)
         # 2 执行查询 有一种狗血结果是查询结果为空 此时要注意返回 None
         raw_result_list = asyncio.run(database.batch(cypher_queries))
+        if raw_result_list is None or raw_result_list[0] is None or len(raw_result_list) == 0:
+            return "None"
+        # 3 结果解析
+        result_list = []
+        for i in range(len(raw_result_list)):
+            result_list.append(OverallNodeTemplate.cypher_result_parser(raw_result_list[i]))
+        # 4 构造结果prompt
+        result_json = []
+        for result in result_list:
+            result_json.append(result.rag_json_dict())
+        return OverallNodeTemplate.get_result_prompt(result_list[0])
+
+    @staticmethod
+    async def a_run_cypher_query(database: GraphNeo4j, entity_list: list[str]) -> str:
+        # 1 构造查询
+        cypher_queries = OverallNodeTemplate.build_overall_queries(entity_list)
+        # 2 执行查询 有一种狗血结果是查询结果为空 此时要注意返回 None
+        raw_result_list = await database.batch(cypher_queries)
         if raw_result_list is None or raw_result_list[0] is None or len(raw_result_list) == 0:
             return "None"
         # 3 结果解析

@@ -1,13 +1,14 @@
 import asyncio
 import json
 import re
-from typing import List
+from typing import List, Any
 
 from langchain_core.exceptions import OutputParserException
 from langchain_core.output_parsers import BaseGenerationOutputParser
 from langchain_core.outputs import ChatGeneration, Generation
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from pydantic import BaseModel, Field, ConfigDict
 
 from graphmind.utils.neo4j_query.prompts import entity as prompts
 from graphmind.adapter.database import GraphNeo4j
@@ -17,13 +18,11 @@ from graphmind.utils.neo4j_query.cyphers.cypher_template import EntityEnsureTemp
 QUERY_TYPE = ["single", "multi", "overall"]
 
 
-class EntityCandidate:
-    cypher_candidate: CypherResult | None = None
-    score: float | None = None
+class EntityCandidate(BaseModel):
+    cypher_candidate: CypherResult | None = Field(default=None)
+    score: float | None = Field(default=None)
 
-    def __init__(self, cypher_candidate=None, score=None):
-        self.cypher_candidate = cypher_candidate
-        self.score = score
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __str__(self):
         return self.cypher_candidate.node_name
@@ -32,15 +31,19 @@ class EntityCandidate:
         return self.score < other.score
 
 
-class EntityExtractResult:
-    entity: str | list[str] | None = None
-    candidate: list[EntityCandidate] | None = None
-    final_entity: str | list[str] | None = None
+class EntityExtractResult(BaseModel):
+    entity: str | list[str] | None = Field(default=None)
+    candidate: list[EntityCandidate] | None = Field(default=None)
+    final_entity: str | list[str] | None = Field(default=None)
 
-    def __init__(self, entity=None, candidate=None, final_entity=None):
-        self.entity = entity
-        self.candidate = candidate
-        self.final_entity = final_entity
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __str__(self):
+        return json.dumps({
+            "entity": self.entity,
+            "candidate": str(self.candidate),
+            "final_entity": self.final_entity
+        }, ensure_ascii=False, indent=0)
 
 
 async def entity_extract(llm: ChatOpenAI,
@@ -98,6 +101,45 @@ def entity_llm_extract(llm: ChatOpenAI,
     return obj
 
 
+async def a_entity_llm_extract(llm: ChatOpenAI,
+                               query_chunk: str) -> list[EntityExtractResult] | None:
+    """
+    步骤一：使用 LLM 提取实体。
+    Args:
+         llm(ChatOpenAI): 执行实体提取的 LLM
+         query_chunk(str): 用户查询语句的子问题句
+
+    Returns:
+         list[EntityExtractResult]: 初步进行实体提取结果列表
+    """
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", prompts.system_prompt),
+            ("user", prompts.user_prompt_template),
+        ]
+    )
+    parser = EntityResultParser()
+    chain = prompt | llm | parser
+    obj: list[EntityExtractResult] = await chain.ainvoke({"input": query_chunk})
+    return obj
+
+
+async def batch_entity_llm_extract(llm: ChatOpenAI,
+                                   query_chunks: list[str]) -> list[list[EntityExtractResult]] | tuple[Any] | None:
+    """
+    批量实体提取。
+    Args:
+         llm(ChatOpenAI): 执行实体提取�� LLM
+         query_chunks(list[str]): 用户查询语句的子问题句列表
+
+    Returns:
+         list[EntityExtractResult]: 初步进行实体提取结果列表
+    """
+    tasks = [a_entity_llm_extract(llm, query) for query in query_chunks]
+    results = await asyncio.gather(*tasks)
+    return results
+
+
 async def entity_database_query(database: GraphNeo4j,
                                 result_obj: list[EntityExtractResult]) -> list[EntityExtractResult] | None:
     """
@@ -109,51 +151,69 @@ async def entity_database_query(database: GraphNeo4j,
     Returns:
         EntityExtractResult: 实体提取结果对象
     """
-
-    async def query_entity(entity_result: EntityExtractResult) -> None:
-        """
-        查询实体，用于填充实体结果中的 EntityCandidate。
-        Args:
-            entity_result(EntityExtractResult): 实体结果对象
-
-        Returns:
-            None
-        """
-        if hasattr(entity_result, '_processed') and entity_result._processed:
-            return
-        # 构造查询语句
-        entity = entity_result.entity
-        cypher = EntityEnsureTemplate.build_fulltext(entity)[0]
-        # 执行查询
-        result = database.query(cypher)
-        # 整理 candidate 结果
-        temp_candidate = []
-        for record in result:
-            temp_node = record.get("node")
-            temp_cypher = CypherResult(
-                cypher=cypher,
-                node_name=temp_node.get("name"),
-                node_description=temp_node.get("description"),
-                node_attr={k: v for k, v in temp_node.items() if k not in ["name", "description"]}
-                # 去除name和description以外的属性
-            )
-            temp_candidate.append(
-                EntityCandidate(cypher_candidate=temp_cypher, score=record.get("score"))
-            )
-        # 保存入实体结果对象
-        entity_result.candidate = temp_candidate
-        entity_result._processed = True
-
     # 针对每个节点都进行异步查询
-    tasks = [query_entity(obj) for obj in result_obj]
+    tasks = [_process_entity_database_query(database, obj) for obj in result_obj]
     await asyncio.gather(*tasks)
     return result_obj
+
+
+async def batch_entity_database_query(database: GraphNeo4j,
+                                      result_obj: list[list[EntityExtractResult]]) -> (list[list[EntityExtractResult]] |
+                                                                                       tuple[Any] | None):
+    """
+    批量实体查询。
+    Args:
+        database(GraphNeo4j): 数据库连接
+        result_obj(list[EntityExtractResult]): 实体提取结果对象
+
+    Returns:
+        list[EntityExtractResult]: 实体提取结果对象
+    """
+    tasks = [entity_database_query(database, obj) for obj in result_obj]
+    return await asyncio.gather(*tasks)
+
+
+async def _process_entity_database_query(database: GraphNeo4j,
+                                         entity_result: EntityExtractResult) -> None:
+    """
+    查询实体，用于填充实体结果中的 EntityCandidate。
+    Args:
+        database(GraphNeo4j): 数据库连接
+        entity_result(EntityExtractResult): 实体结果对象
+
+    Returns:
+        None，直接修改了传入的实体对象
+    """
+    if hasattr(entity_result, '_processed') and entity_result._processed:
+        return
+    # 构造查询语句
+    entity = entity_result.entity
+    cypher = EntityEnsureTemplate.build_fulltext(entity)[0]
+    # 执行查询
+    result = database.query(cypher)
+    # 整理 candidate 结果
+    temp_candidate = []
+    for record in result:
+        temp_node = record.get("node")
+        temp_cypher = CypherResult(
+            cypher=cypher,
+            node_name=temp_node.get("name"),
+            node_description=temp_node.get("description"),
+            node_attr={k: v for k, v in temp_node.items() if k not in ["name", "description"]}
+            # 去除name和description以外的属性
+        )
+        temp_candidate.append(
+            EntityCandidate(cypher_candidate=temp_cypher, score=record.get("score"))
+        )
+    # 保存入实体结果对象
+    entity_result.candidate = temp_candidate
+    entity_result._processed = True
 
 
 async def entity_top_decide(n: int,
                             result_obj: list[EntityExtractResult]) -> list[EntityExtractResult] | None:
     """
-    使用 top_n 策略确定实体。（TODO）
+    步骤三：使用 top_n 策略确定实体。（TODO）
     Args:
         n(int): top_n 策略中的 n 值
         result_obj(list[EntityExtractResult]): 实体提取结果对象

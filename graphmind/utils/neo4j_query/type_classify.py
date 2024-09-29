@@ -1,3 +1,7 @@
+import asyncio
+from typing import Any
+from enum import Enum
+
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -5,19 +9,19 @@ from langchain_openai import ChatOpenAI
 from graphmind.utils.neo4j_query.prompts import classify as prompts
 
 
-class QueryTypeResult:
-    query_type: int | None
-    query_cypher: str | None
+class QueryType(Enum):
+    SINGLE = 1
+    """单实体查询"""
 
-    def __init__(self,
-                 query_type: str | int | None = None,
-                 query_cypher: str | None = None):
-        self.query_type = int(query_type)
-        self.query_cypher = query_cypher
+    MULTI = 2
+    """多实体查询"""
+
+    OVERALL = 3
+    """整体查询"""
 
 
 async def type_classify(llm: ChatOpenAI,
-                            user_query: str) -> QueryTypeResult | None:
+                        user_query: str) -> int | None:
     """
     Classify the query type based on the user query.
     Args:
@@ -35,4 +39,18 @@ async def type_classify(llm: ChatOpenAI,
     parser = StrOutputParser()
     chain = prompt | llm | parser
     obj: str = await chain.ainvoke({"input": user_query})
-    return QueryTypeResult(query_type=obj)
+    return int(obj)
+
+
+async def batch_type_classify(llm: ChatOpenAI,
+                              user_queries: list[str]) -> list[int] | tuple[Any] | None:
+    """
+    Batch classify the query type based on the user queries.
+    Args:
+        llm (ChatOpenAI): Chat model
+        user_queries (list[str]): User queries
+    Returns:
+        list[str]: Query types
+    """
+    tasks = [type_classify(llm, query) for query in user_queries]
+    return await asyncio.gather(*tasks)
