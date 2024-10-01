@@ -94,7 +94,7 @@ class SingleNodeTemplate:
         for result in result_list:
             result_json.append(SingleNodeTemplate.get_result_prompt(result))
         return json.dumps({"nodes": result_json},
-                          ensure_ascii=False, indent=2)
+                          ensure_ascii=False, indent=0)
 
 
 class MultiNodeTemplate:
@@ -232,8 +232,8 @@ class OverallNodeTemplate:
                                               description_embedding=now_match_obj.get('description_embedding', None),
                                               node_attr={k: v for k, v in now_match_obj.items() if
                                                          k not in IGNORE_ATTRIBUTE}))
-            relation = RelatedNode(related_name=None,  # 待我想想办法优化查询语句来解决这个None
-                                   related_description=now_relation_obj.get('description', None),
+            relation = RelatedNode(relation_name=None,  # 待我想想办法优化查询语句来解决这个None
+                                   relation_description=now_relation_obj.get('description', None),
                                    previous_cypher_result=related_nodes[-2],
                                    next_cypher_result=related_nodes[-1])
             related_nodes[0].related_nodes.append(relation)
