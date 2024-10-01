@@ -14,7 +14,7 @@ class CypherResult(BaseModel):
     node_description: str | None = Field(default=None)
     description_embedding: list[float] | None = Field(default=None, exclude=True)
     node_attr: dict | None = Field(default=None)
-    related_nodes: list["RelatedNode"] | None = Field(default=None)
+    related_nodes: list["RelatedNode"] | None = Field(default=[])
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
