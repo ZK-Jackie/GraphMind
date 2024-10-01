@@ -1,9 +1,9 @@
 import time
 import functools
 from enum import Enum
-from pydantic import BaseModel, Field
+from uuid import uuid4
 
-from graphmind.service.reporter import BaseReporter
+from pydantic import BaseModel, Field
 
 
 class RoleEnum(Enum):
@@ -40,6 +40,16 @@ class ChatMessage(BaseModel):
 
     message_id: str | None = Field(description="Message ID", default=None)
     """消息 ID，注意是 str 类型，本模块使用 uuid4 """
+
+    def get_ai_message(self) -> "ChatMessage":
+        return ChatMessage(
+            role=RoleEnum.AI.value,
+            content="",
+            chunk_resp=False,
+            user_id=self.user_id,
+            conv_id=self.conv_id,
+            message_id=str(uuid4())
+        )
 
 
 class StatusEnum(Enum):

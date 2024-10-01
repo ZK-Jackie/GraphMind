@@ -3,7 +3,6 @@ from abc import abstractmethod, ABC
 
 from pydantic import BaseModel, Field
 
-from graphmind.api.grpc.status_service_impl import report
 from graphmind.service.base import ProcessStatus, ChatMessage
 
 
