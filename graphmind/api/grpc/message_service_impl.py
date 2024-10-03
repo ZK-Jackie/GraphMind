@@ -1,5 +1,6 @@
 import os
 
+from graphmind.service.agent import agent
 from graphmind.service.base import ChatMessage
 from graphmind.service.chain import rag_chain
 from graphmind.api.grpc.chat_service import chat_service_pb2
@@ -14,13 +15,13 @@ class MessageServiceImpl(chat_service_pb2_grpc.ChatServiceServicer):
     def stream(self, request, context):
         # 模拟流式返回消息
         req_message = _request_to_message(request)
-        for chunk in rag_chain.stream(req_message):
+        for chunk in agent.stream(req_message):
             yield _message_to_response(chunk)
 
     def invoke(self, request, context):
         # 处理非流式返回消息
         req_message = _request_to_message(request)
-        return _message_to_response(rag_chain.invoke(req_message))
+        return _message_to_response(agent.invoke(req_message))
 
 def _request_to_message(request):
     return ChatMessage(

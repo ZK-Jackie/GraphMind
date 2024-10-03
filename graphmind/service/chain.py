@@ -2,6 +2,7 @@ import os
 from typing import Generator
 from typing_extensions import Self
 from uuid import uuid4
+from dotenv import load_dotenv
 
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
@@ -16,6 +17,8 @@ from graphmind.adapter.database import GraphNeo4j
 from graphmind.service.base import ChatMessage, RoleEnum
 from graphmind.service.config.redis import RedisConfig
 from graphmind.utils.neo4j_query.graph_qa import get_graph_context
+
+load_dotenv()
 
 
 class GraphChain(BaseModel):

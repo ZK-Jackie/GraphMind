@@ -53,6 +53,7 @@ class ChatServiceServicer(object):
 
     def stream(self, request, context):
         """Java 流式获取 AI 消息
+        定义 Http 接口
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
