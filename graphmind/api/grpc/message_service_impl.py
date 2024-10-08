@@ -1,14 +1,12 @@
-import logging
 import os
 
 from graphmind.service.base import ChatMessage
 from graphmind.service.agent import agent
-from graphmind.service.chain import rag_chain
 from graphmind.api.grpc.chat_service import chat_service_pb2, chat_service_pb2_grpc
 
 SERVER_PORT = os.getenv("SERVER_PORT", 50051)
 
-logger = logging.getLogger("GraphMind")
+from graphmind_logger import logger
 
 
 # GRPC 聊天服务实现

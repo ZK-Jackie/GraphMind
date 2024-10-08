@@ -150,7 +150,7 @@ async def create_entity_merge_task(node_list: list[InfoNode],
                         task_status="UNPROCESS")
         # 4 执行合并任务
         async_tasks.append(asyncio.create_task(
-            execute_entity_merge_task(task, name, merge_type, merge_level, merge_source, models)
+            execute_entity_merge_task(task, work_dir, name, merge_type, merge_level, merge_source, models)
         ))
     # 5 执行任务
     final_df = pd.concat([final_df, pd.concat(await asyncio.gather(*async_tasks), ignore_index=True)],
@@ -160,6 +160,7 @@ async def create_entity_merge_task(node_list: list[InfoNode],
 
 
 async def execute_entity_merge_task(task: BaseTask,
+                                    work_dir: str,
                                     name: str,
                                     merge_type: str,
                                     merge_level: int,

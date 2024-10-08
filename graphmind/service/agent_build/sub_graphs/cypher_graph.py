@@ -19,9 +19,7 @@ from graphmind.service.context_manager import ContextManager
 from graphmind.utils.neo4j_query.entity_extract import batch_entity_llm_extract, batch_entity_database_query
 from graphmind.utils.neo4j_query.graph_qa import batch_cypher_query
 from graphmind.utils.neo4j_query.type_classify import batch_type_classify
-import logging
-
-logger = logging.getLogger("GraphMind")
+from graphmind_logger import logger
 
 
 class CypherGraph(BaseModel):
@@ -244,6 +242,11 @@ class KnowledgeSearch(BaseModel):
     queries: list[str]
 
 
+cypher_agent = CypherGraph(llm=ContextManager.get_persistent_context("llm"),
+                           embeddings=ContextManager.get_persistent_context("embeddings"),
+                           database=ContextManager.get_persistent_context("database"))
+
+
 def knowledge_search_tool_node(main_state: State):
     # 1 从 main_state 中获取 queries 字段
     last_ai_message = main_state["messages"][-1]
@@ -257,12 +260,9 @@ def knowledge_search_tool_node(main_state: State):
         "type_finished": False
     }
     # 3 调用子图
-    llm = ContextManager.get_persistent_context("llm")
-    embeddings = ContextManager.get_persistent_context("embeddings")
-    database = ContextManager.get_persistent_context("database")
     thread_id = f"{ContextManager.get_transient_context('session_id') or 'test_1'}_{tool_call_id}"
     user_config = {"configurable": {"thread_id": thread_id}}
-    agent = CypherGraph(llm=llm, embeddings=embeddings, database=database).agent_with_history
+    agent = cypher_agent.agent_with_history
     result: QueryState = agent.invoke(trigger_state, user_config, stream_mode="values")
     return {"messages": [ToolMessage(content=str(result["retrival_result"]),
                                      tool_call_id=tool_call_id)]}

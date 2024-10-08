@@ -6,8 +6,10 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from graphmind.adapter.database import GraphNeo4j
 from graphmind.service.agent_build.graph_agent import GraphAgent
+from graphmind.service.agent_build.sub_graphs.cypher_graph import CypherGraph
 from graphmind.service.base import ChatMessage
 from graphmind.service.context_manager import ContextManager
+from graphmind.utils.neo4j_query.base import CypherRelation
 
 load_dotenv()
 
@@ -26,7 +28,8 @@ database = GraphNeo4j(
     uri=os.getenv("NEO4J_URI"),
     username=os.getenv("NEO4J_USER"),
     password=os.getenv("NEO4J_PASSWORD"),
-    database=os.getenv("NEO4J_DATABASE")
+    database=os.getenv("NEO4J_DATABASE"),
+    debug=True
 )
 test_message = ChatMessage(
     role=0,
@@ -40,5 +43,6 @@ test_message = ChatMessage(
 ContextManager.set_transient_context("session_id", f"{test_message.user_id}_{test_message.conv_id}")
 
 agent = GraphAgent(llm=llm, embeddings=embeddings, database=database)
+
 
 __all__ = ["agent"]

@@ -7,23 +7,14 @@ from graphmind.api.grpc.status_service import status_service_pb2_grpc
 from graphmind.api.grpc.message_service_impl import MessageServiceImpl
 from graphmind.api.grpc.status_service_impl import StatusServiceImpl
 from dotenv import load_dotenv
-import logging
+
+from graphmind_logger import logger
 
 load_dotenv()
 
 SERVER_PORT = os.getenv("SERVER_PORT", 50051)
 
-logger = logging.getLogger("GraphMind")
-logger.setLevel(logging.INFO)
 
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-ch.setFormatter(formatter)
-
-logger.addHandler(ch)
 
 if __name__ == "__main__":
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

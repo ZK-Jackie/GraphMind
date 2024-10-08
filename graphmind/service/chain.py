@@ -139,7 +139,8 @@ database = GraphNeo4j(
     uri=os.getenv("NEO4J_URI"),
     username=os.getenv("NEO4J_USER"),
     password=os.getenv("NEO4J_PASSWORD"),
-    database=os.getenv("NEO4J_DATABASE")
+    database=os.getenv("NEO4J_DATABASE"),
+    debug=True
 )
 rag_chain = GraphChain(llm=llm, embeddings=embeddings, database=database)
 

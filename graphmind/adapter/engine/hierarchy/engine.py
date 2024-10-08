@@ -59,7 +59,7 @@ if __name__ == '__main__':
     models = GraphmindModel(llm=get_default_llm(),
                             embeddings=get_default_embeddings(),
                             database=get_default_database(debug=True))
-    reader = MarkdownReader(file="input", skip_mark="<abd>")
+    reader = MarkdownReader(file="test_input", skip_mark="<abd>")
 
     engine = HierarchyEngine(models=models, reader=reader, work_name="离散数学")
 

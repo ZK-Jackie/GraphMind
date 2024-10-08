@@ -19,9 +19,7 @@ from graphmind.service.agent_build.redis_memory import redis_memory
 from graphmind.service.agent_build.sub_graphs.cypher_graph import knowledge_search_tool, knowledge_search_tool_node
 from graphmind.service.base import ChatMessage, RoleEnum
 from graphmind.service.context_manager import ContextManager
-import logging
-
-logger = logging.getLogger("GraphMind")
+from graphmind_logger import logger
 
 
 class Inquiry(BaseModel):
