@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package file_service;
+
+/*  build command:
+    python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. file_service.proto
+ */
+
+/*** 上传：增 ***/
+// 定义文件块消息
+message FileChunk {
+  // 当前文件块内容
+  bytes content = 1;
+  // 当前文件块序号
+  int32 chunkSeq = 2;
+}
+
+// 定义文件信息
+message File {
+  // 文件名，带后缀
+  string filename = 1;
+  // 文件大小，单位字节
+  int64 fileSize = 2;
+  // 文件块数组
+  repeated FileChunk chunks = 3;
+  // 当前文件序号
+  int32 fileSeq = 4;
+  // 文件块总数
+  int32 chunkTotal = 5;
+}
+
+message FileIO {
+  // 任务 ID
+  string taskId = 1;
+  // 总文件大小
+  int64 totalFileSize = 2;
+  // 文件
+  repeated File files = 3;
+  // 文件总数
+  int32 fileTotal = 4;
+}
+
+// 定义上传状态消息
+message ServiceStatus {
+  // 上传是否成功，成功-true，失败-false
+  bool success = 1;
+  // 上传状态信息
+  string message = 2;
+}
+
+/*** 删除 ***/
+// 定义文件请求消息
+message DeleteRequest {
+  // 任务 ID
+  string taskId = 1;
+  // 文件名
+  string filename = 2;
+}
+
+
+// 定义文件传输服务
+service FileTransferService {
+  // Java 端上传文件到 python 端
+  rpc upload(stream FileIO) returns (ServiceStatus);
+  // Java 端向 python 端请求删除文件
+  rpc delete(DeleteRequest) returns (ServiceStatus);
+}
+

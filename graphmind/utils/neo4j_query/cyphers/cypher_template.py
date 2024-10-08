@@ -94,7 +94,7 @@ class SingleNodeTemplate:
         for result in result_list:
             result_json.append(SingleNodeTemplate.get_result_prompt(result))
         return json.dumps({"nodes": result_json},
-                          ensure_ascii=False, indent=0)
+                          ensure_ascii=False)
 
 
 class MultiNodeTemplate:

@@ -24,7 +24,7 @@ class CypherResult(BaseModel):
             "node_description": self.node_description,
             "node_attr": self.node_attr,
         }
-        return json.dumps(temp_dict, ensure_ascii=False, indent=0)
+        return json.dumps(temp_dict, ensure_ascii=False)
 
     def rag_json_dict(self) -> dict:
         return {
@@ -61,7 +61,7 @@ class RelatedNode(BaseModel):
             "relation_name": self.relation_name,
             "relation_description": self.relation_description,
         }
-        return json.dumps(temp_dict, ensure_ascii=False, indent=0)
+        return json.dumps(temp_dict, ensure_ascii=False)
 
     def rag_json_dict(self):
         return {

@@ -5,10 +5,8 @@ package graphmind.grpc.status_service;
 /*  build command:
     python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. status_service.proto
  */
+// 状态
 enum StatusId {
-  /***
-   * 处理状态类
-   ***/
   // 未处理
   UNPROCESS = 0;
   // 正在处理
@@ -21,12 +19,16 @@ enum StatusId {
   TIMEOUT = 4;
   // 处理中断
   CANCELLED = 5;
-
-  /***
-   * 控制处理类
-   ***/
-  // 停止处理（由 Java 端向 Python 端发送）
-  STOP = 10;
+  // 就绪等待处理（由 Java 端向 Python 端发送）
+  READY = 10;
+  // 开始处理（由 Java 端向 Python 端发送）
+  START = 11;
+  // 暂停处理，可以继续（由 Java 端向 Python 端发送）
+  PAUSE = 12;
+  // 继续处理（由 Java 端向 Python 端发送）
+  CONTINUE = 13;
+  // 结束处理，无法继续（由 Java 端向 Python 端发送）
+  END = 14;
 }
 
 // 定义当前处理状态信息
@@ -49,8 +51,8 @@ message Empty {}
 
 // 定义状态发送、状态控制服务
 service StatusService {
-  // 发送当前处理状态信息（理解：python 汇报处理状态，提供 ChatProcessStat，但 Java 端只需返回空）
+  // 发送当前处理状态信息（理解：python 汇报处理状态，提供 ProcessStatus，但 Java 端只需返回空）
   rpc report (ProcessStatus) returns (Empty) {}
-  // 接受状态控制信息（理解：Java 端发送控制信息，提供 ChatProcessStat，python 端只需返回空，晚点再返回一个 Report）
+  // 接受状态控制信息（理解：Java 端发送控制信息，提供 ProcessStatus；python 端只需返回空，晚点 python 做一个 report）
   rpc control (ProcessStatus) returns (Empty) {}
 }

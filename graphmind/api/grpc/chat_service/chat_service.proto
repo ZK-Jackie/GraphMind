@@ -1,10 +1,31 @@
 syntax = "proto3";
 
 package graphmind.grpc.chat_service;
-
+// 当前暂未更新生成 status 代码
 /*  build command:
     python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. chat_service.proto
  */
+// 状态（删去了聊天服务中不可能的状态）
+enum StatusId {
+  // 未处理
+  UNPROCESS = 0;
+  // 正在处理
+  PROCESSING = 1;
+  // 处理完成
+  PROCESSED = 2;
+  // 处理失败
+  FAILED = 3;
+  // 处理超时
+  TIMEOUT = 4;
+  // 处理中断
+  CANCELLED = 5;
+  // 开始处理（由 Java 端向 Python 端发送）
+  START = 11;
+  // 继续处理（由 Java 端向 Python 端发送）
+  CONTINUE = 13;
+  // 结束处理，无法继续（由 Java 端向 Python 端发送）
+  END = 14;
+}
 
 enum Role {
   // 用户
@@ -29,12 +50,38 @@ message ChatMessage {
   string messageId = 6;
 }
 
+// 定义状态信息
+message ChatStatus {
+  // 当前信息发送角色
+  Role role = 1;
+  // 当前处理信号 / 接收到的控制信号
+  StatusId statusId = 2;
+  // 当前处理状态信息
+  string statusMessage = 3;
+  // 用户 ID
+  string userId = 4;
+  // 对话 ID
+  string convId = 5;
+  // 正在被处理的消息 ID
+  string userMessageId = 6;
+  // 当前处理状态信号发送时间（即发送信息的这个状态的开始时间，也是上一个状态的结束时间）
+  string sendTime = 7;
+}
+
+message Empty {}
+
 // 定义聊天服务
 service ChatService {
   // Java 流式获取 AI 消息
-  rpc stream(ChatMessage) returns (stream ChatMessage) {
-    // 定义 Http 接口
-  }
+  rpc stream(ChatMessage) returns (stream ChatMessage) {}
   // Java 非流式获取 AI 消息
   rpc invoke(ChatMessage) returns (ChatMessage) {}
+}
+
+// 定义聊天信息处理状态服务
+service ChatStatusService {
+  // 发送当前处理状态信息（理解：python 汇报处理状态，提供 ChatStatus； Java 端只需返回空）
+  rpc report (ChatStatus) returns (Empty) {}
+  // 接受状态控制信息（理解：Java 端发送控制信息，提供 ChatStatus；python 端只需返回空，python 将做一个 report）
+  rpc control (ChatStatus) returns (Empty) {}
 }

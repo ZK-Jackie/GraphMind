@@ -14,8 +14,10 @@ from graphmind.utils.neo4j_query.prompts import entity as prompts
 from graphmind.adapter.database import GraphNeo4j
 from graphmind.utils.neo4j_query.base import CypherResult
 from graphmind.utils.neo4j_query.cyphers.cypher_template import EntityEnsureTemplate
-
+import logging
 QUERY_TYPE = ["single", "multi", "overall"]
+
+logger = logging.getLogger("GraphMind")
 
 
 class EntityCandidate(BaseModel):
@@ -43,7 +45,7 @@ class EntityExtractResult(BaseModel):
             "entity": self.entity,
             "candidate": str(self.candidate),
             "final_entity": self.final_entity
-        }, ensure_ascii=False, indent=0)
+        }, ensure_ascii=False)
 
 
 async def entity_extract(llm: ChatOpenAI,
@@ -75,6 +77,7 @@ async def entity_extract(llm: ChatOpenAI,
     elif strategy == 'llm':
         # 3.2 llm
         await entity_llm_decide(llm, result_list, query_chunk)
+    logger.info(f"Get final entity: {result_list}")
     return result_list
 
 
@@ -98,6 +101,7 @@ def entity_llm_extract(llm: ChatOpenAI,
     parser = EntityResultParser()
     chain = prompt | llm | parser
     obj: list[EntityExtractResult] = chain.invoke({"input": query_chunk})
+    logger.info(f"Get entity extract result: {obj}")
     return obj
 
 
@@ -121,6 +125,7 @@ async def a_entity_llm_extract(llm: ChatOpenAI,
     parser = EntityResultParser()
     chain = prompt | llm | parser
     obj: list[EntityExtractResult] = await chain.ainvoke({"input": query_chunk})
+    logger.info(f"Get entity extract result: {obj}")
     return obj
 
 
@@ -137,6 +142,7 @@ async def batch_entity_llm_extract(llm: ChatOpenAI,
     """
     tasks = [a_entity_llm_extract(llm, query) for query in query_chunks]
     results = await asyncio.gather(*tasks)
+    logger.info(f"Get entity extract result: {results}")
     return results
 
 
@@ -154,6 +160,7 @@ async def entity_database_query(database: GraphNeo4j,
     # 针对每个节点都进行异步查询
     tasks = [_process_entity_database_query(database, obj) for obj in result_obj]
     await asyncio.gather(*tasks)
+    logger.info(f"Get entity database query result: {result_obj}")
     return result_obj
 
 

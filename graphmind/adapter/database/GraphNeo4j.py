@@ -13,7 +13,7 @@ class GraphNeo4j(BaseGraphDatabase):
     _client: Neo4jGraph | None = None
 
     @model_validator(mode="after")
-    def validate_env(self) -> Self:
+    def validate_connection(self) -> Self:
         try:
             self._client = Neo4jGraph(url=self.uri,
                                       username=self.username,
@@ -21,9 +21,9 @@ class GraphNeo4j(BaseGraphDatabase):
                                       database=self.database)
         except Exception as e:
             if self.debug:
+                warnings.warn(f"Neo4j connection failed.")
                 return self
             else:
-                warnings.warn(f"Neo4j connection failed.")
                 raise RuntimeError("Neo4j connection failed.")
         return self
 

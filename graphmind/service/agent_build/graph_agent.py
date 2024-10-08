@@ -19,6 +19,9 @@ from graphmind.service.agent_build.redis_memory import redis_memory
 from graphmind.service.agent_build.sub_graphs.cypher_graph import knowledge_search_tool, knowledge_search_tool_node
 from graphmind.service.base import ChatMessage, RoleEnum
 from graphmind.service.context_manager import ContextManager
+import logging
+
+logger = logging.getLogger("GraphMind")
 
 
 class Inquiry(BaseModel):
@@ -74,6 +77,7 @@ class GraphAgent(BaseModel):
 
         self.agent_with_history = graph_builder.compile(checkpointer=redis_memory)
 
+        logger.info("LangGraph agent created.")
         return self
 
     def invoke(self, user_message: ChatMessage) -> ChatMessage:
@@ -92,6 +96,7 @@ class GraphAgent(BaseModel):
         }
         user_config = {"configurable": {"thread_id": thread_id}}
         ai_message.content = self.agent_with_history.invoke(input_state, user_config, stream_mode="values")
+        logger.info(f"AI message: {ai_message.model_dump()}")
         return ai_message
 
     def stream(self, user_message: ChatMessage) -> Generator[ChatMessage, None, None]:
@@ -117,6 +122,7 @@ class GraphAgent(BaseModel):
             else:
                 ai_message.content += chunk
             yield ai_message
+        logger.info(f"AI message: {ai_message.model_dump()}")
 
     def graph_str_stream(self, input_state: dict, user_config: dict) -> Generator[str, None, None]:
         stream_result = self.agent_with_history.stream(input_state, user_config, stream_mode="messages")

@@ -19,6 +19,9 @@ from graphmind.service.context_manager import ContextManager
 from graphmind.utils.neo4j_query.entity_extract import batch_entity_llm_extract, batch_entity_database_query
 from graphmind.utils.neo4j_query.graph_qa import batch_cypher_query
 from graphmind.utils.neo4j_query.type_classify import batch_type_classify
+import logging
+
+logger = logging.getLogger("GraphMind")
 
 
 class CypherGraph(BaseModel):
@@ -69,6 +72,8 @@ class CypherGraph(BaseModel):
         )
 
         self.agent_with_history = cypher_graph_builder.compile(checkpointer=redis_memory)
+
+        logger.info("CypherGraph agent created.")
 
         return self
 

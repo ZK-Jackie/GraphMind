@@ -1,51 +1,42 @@
-import json
-import pickle
 from typing import List, Iterator, Any
 
-from pydantic import Field, ConfigDict
+from pydantic import Field, ConfigDict, BaseModel
 
 from graphmind.adapter.engine.base import BaseEntity, BaseRelation
 from graphmind.adapter.structure import BaseStructure, BaseTask
 
 
-class InfoNode:
-    title: str
+class InfoNode(BaseModel):
+    title: str | None = Field(description="当前文本结点的最近一个 Markdown 标题", default=None)
     """Markdown 标题"""
 
-    content: str | None
+    content: str | None = Field(description="当前文本结点的正文", default=None)
     """Markdown 正文"""
 
-    level: int
+    level: int = Field(description="当前文本结点标题的标题级别", default=0)
     """标题级别"""
 
-    parent: "InfoNode" = None
+    parent: Any | "InfoNode" | None = Field(default=None, exclude=True)
     """父节点"""
 
-    children: list
+    children: list | None = Field(default_factory=list)
     """子节点列表"""
 
-    entity: list[BaseEntity] | None = None
+    entity: list[BaseEntity] | None = Field(description="当前结点提取出的实体信息", default_factory=list)
     """实体信息"""
 
-    relation: list[BaseRelation] | None = None
+    relation: list[BaseRelation] | None = Field(description="当前结点提取出的关系信息", default_factory=list)
     """关系信息"""
 
-    entity_task: "BaseTask" = None
+    entity_level_task: BaseTask | None = Field(description="执行当前结点实体等级划分的任务", default=None)
+    """实体等级任务信息"""
+
+    entity_attr_task: list[BaseTask] | None = Field(description="执行当前结点实体属性提取的任务", default_factory=list)
     """实体任务信息"""
 
-    relation_task: "BaseTask" = None
+    relation_task: BaseTask | None = Field(description="执行当前结点关系提取的任务", default=None)
     """关系任务信息"""
 
-    def __init__(self,
-                 title: str,
-                 content: str | None,
-                 level: int,
-                 parent=None):
-        self.title = title
-        self.content = content
-        self.parent = parent
-        self.level = level
-        self.children = []  # 问题：为什么必须在这里初始化一个空列表，不能在前面定义的时候初始化一个空列表，否则会出现内存异常
 
     def add_child(self, node: "InfoNode"):
         node.parent = self
@@ -58,46 +49,27 @@ class InfoNode:
         else:
             return [self.title]
 
+    def get_entity_num(self) -> int:
+        return len(self.entity) if self.entity else 0
+
     def get_entity_names(self) -> List[str]:
         if self.entity:
             return [entity.name for entity in self.entity]
         return []
 
-    def __iter__(self) -> "InfoNode":
+    def iter(self) -> Iterator["InfoNode"] | None:
         # 生成器，用于遍历当前节点及其所有子节点
         yield self
         for child in self.children:
-            yield from child
-
-    def dump_dict(self):
-        return {
-            "title": self.title,
-            "content": self.content,
-            "level": self.level,
-            "children": [child.dump_dict() for child in self.children]
-        }
-
-    @staticmethod
-    def from_dict(data: dict):
-        title = data.get("title")
-        content = data.get("content")
-        level = data.get("level")
-        children = data.get("children")
-        node = InfoNode(title=title, content=content, level=level)
-        for child in children:
-            node.add_child(InfoNode.from_dict(child))
-        return node
+            yield from child.iter()
 
 
-class InfoTree:
-    main_root: InfoNode | None = None
+class InfoTree(BaseModel):
+    main_root: InfoNode | None = Field(description="Main root of the tree", default=None)
     """根节点"""
 
-    node_cnt: int = 0
+    node_cnt: int = Field(description="Total node count of the tree", default=0)
     """当前树的总节点数量"""
-
-    def __init__(self):
-        self.main_root = None
 
     def insert_node(self, root: InfoNode, node: InfoNode, node_level: int):
         if self.main_root is None:
@@ -132,14 +104,6 @@ class InfoTree:
             # 如果当前节点的 level 小于 root 的 level，向上回溯
             self.insert_node(root.parent, node, node_level)
 
-    def dump_dict(self):
-        final_dict = {"main_root": self.main_root.dump_dict()}
-        return final_dict
-
-    def from_dict(self, data: dict):
-        self.main_root = InfoNode.from_dict(data.get("main_root"))
-        return self
-
     @staticmethod
     def _is_dup_children(root: InfoNode, node: InfoNode) -> (bool, InfoNode | None):
         for child in root.children:
@@ -155,15 +119,11 @@ class InfoTree:
             result += self._print_tree(child, depth + 1)
         return result
 
-    def __str__(self) -> str:
+    def print(self) -> str:
         return self._print_tree(self.main_root)
 
-    @staticmethod
-    def traverse(root: InfoNode) -> Iterator["InfoNode"] | None:
-        return iter(root)
-
-    def __iter__(self) -> Iterator["InfoNode"]:
-        return self.traverse(self.main_root)
+    def iter(self) -> Iterator["InfoNode"]:
+        return self.main_root.iter()
 
 
 class InfoForest(BaseStructure):
@@ -176,36 +136,6 @@ class InfoForest(BaseStructure):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     """pydantic 配置：允许任意类型"""
 
-    def dump_json(self):
-        final_dict = {
-            "title": self.title,
-            "trees": [tree.dump_dict() for tree in self.trees]
-        }
-        return final_dict
-
-    @staticmethod
-    def from_json(file_path: str):
-        raw = json.load(open(file_path, "r"))
-        forest = InfoForest()
-        for tree in raw:
-            forest.trees.append(InfoTree().from_dict(tree))
-        return forest
-
-    def dump_pickle(self, file_path: str):
-        pickle.dump(self, open(file_path, "wb"))
-
-    @staticmethod
-    def from_pickle(file_path: str):
-        return pickle.load(open(file_path, "rb"))
-
-
-
-    def dump_dict(self):
-        return {
-            "title": self.title,
-            "trees": [tree.dump_dict() for tree in self.trees]
-        }
-
     def add_tree(self, tree: InfoTree):
         self.trees.append(tree)
 
@@ -215,17 +145,17 @@ class InfoForest(BaseStructure):
             node_cnt += tree.node_cnt
         return node_cnt
 
-    def __str__(self) -> str:
+    def print(self) -> str:
         result = ""
         for tree in self.trees:
             result += str(tree)
         return result
 
-    def __len__(self) -> int:
+    def get_size(self) -> int:
         return len(self.trees)
 
-    def __iter__(self) -> Iterator[InfoTree]:
+    def iter(self) -> Iterator[InfoTree]:
         return iter(self.trees)
 
     def get_index(self) -> str:
-        return self.__str__()
+        return self.print()

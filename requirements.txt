@@ -2,12 +2,12 @@
 # GraphMind Chat Base
 python-dotenv
 tqdm==4.66.5
+shortuuid==1.0.13
 pydantic>=2.8.2, <3.0.0
 six==1.16.0
 oss2==2.18.4
 langchain==0.3.0
 langgraph==0.2.28
-langchainhub==0.1.20
 langchain-community==0.3.0
 langchain-core==0.3.0
 langchain-openai==0.2.0
@@ -71,3 +71,22 @@ grpcio-tools==1.66.1
 # requirements-graphmind[http].txt
 fastapi==0.115.0
 uvicorn==0.30.6
+# requirements-graphmind[magic-pdf[full]].txt
+# MinerU Base
+magic-pdf[full]
+# MinerU Model
+# https://github.com/opendatalab/MinerU/blob/master/docs/how_to_download_models_en.md
+# MinerU config at ~/magic-pdf.json
+# {
+#    "bucket_info":{
+#        "bucket-name-1":["ak", "sk", "endpoint"],
+#        "bucket-name-2":["ak", "sk", "endpoint"]
+#    },
+#    "models-dir":"/tmp/models",    # 这里要改成实际的模型存放路径
+#    "device-mode":"cpu",           # cpu or gpu
+#    "table-config": {
+#        "model": "TableMaster",
+#        "is_table_recog_enable": false,
+#        "max_time": 400
+#    }
+#}

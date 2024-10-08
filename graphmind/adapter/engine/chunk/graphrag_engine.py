@@ -1,17 +1,26 @@
+import asyncio
 import os
 import time
+from pathlib import Path
+from typing_extensions import Self
 import jinja2
 import shutil
 
 import pandas as pd
-from graphrag.index.cli import index_cli
-from typing_extensions import Self
+from neo4j import GraphDatabase
+
+from graphmind.adapter.database import GraphNeo4j
+from graphmind.adapter.engine.chunk.persist_neo4j import GraphragPersist
+from graphmind.adapter.engine.chunk.graphrag_reporter import GraphragReporter
+from graphrag.config import load_config, GraphRagConfig
+from graphrag.index.api import build_index
 
 from pydantic import model_validator, Field, ConfigDict
 
 from graphmind.adapter.engine import BaseEngine, SUPPORT_CONFIG
 from graphmind.adapter.llm import TaskZhipuAI, EmbeddingsZhipuAI
 from graphmind.utils.file_reader import find_file
+from graphrag.index.progress.rich import RichProgressReporter
 
 
 # TODO 从输入输出上看，更加符合一个Builder的机制，后续要修改为Builder类
@@ -22,7 +31,10 @@ class GraphragEngine(BaseEngine):
     input_type: str | list[str] = Field(description="Input file type", default="txt")
     """用户文件输入类型"""
 
-    entity_types: list[str] = Field(description="Entity types", default=["概念", "定理", "性质", "原理", "算法", "数学家"])
+    run_id: str | None = Field(description="Run ID", default=None)
+
+    entity_types: list[str] = Field(description="Entity types",
+                                    default=["概念", "定理", "性质", "原理", "算法", "数学家"])
     """实体类型"""
 
     skip_workflows: str | list[str] = Field(description="Skip workflows", default=[
@@ -40,10 +52,11 @@ class GraphragEngine(BaseEngine):
     """跳过的工作流配置"""
 
     config_template_path: str | None = Field(description="Custom configuration file path",
-                                             default="config/template.yaml")
+                                             default=f"{os.path.dirname(os.path.abspath(__file__))}/config/template.yaml")
     """自定义配置文件路径"""
 
-    prompt_path: str | None = Field(description="Default configuration file path", default="prompts")
+    prompt_path: str | None = Field(description="Default configuration file path",
+                                    default=f"{os.path.dirname(os.path.abspath(__file__))}/prompts/textbook_zh")
     """默认提示词文件路径"""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -77,7 +90,16 @@ class GraphragEngine(BaseEngine):
         self._execute_graphrag_run()
         # 4 TODO parquet转csv（如果用户在参数中要求）
         # self._execute_output_convert()
+        # 5 持久化
+        self.persist()
         return self
+
+    def persist(self):
+        client = GraphDatabase.driver(self.graph_database.uri,
+                                      auth=(self.graph_database.username, self.graph_database.password))
+        GraphragPersist(book_name=self.work_name,
+                        client=client,
+                        folder_path=f"{self.work_dir}/output/{self.run_id}/artifacts").persist()
 
     def _execute_input_init(self) -> None:
         # 1 找用户目录下的文件，复制文件到input目录
@@ -94,7 +116,7 @@ class GraphragEngine(BaseEngine):
 
     def _execute_config_init(self) -> None:
         # 1 读取配置模板
-        with open(f"{self.work_dir}/settings.yaml", "r",  encoding='utf-8') as f:
+        with open(f"{self.work_dir}/settings.yaml", "r", encoding='utf-8') as f:
             template = f.read()
         # 2 渲染配置模板
         # 先准备好正则表达式
@@ -122,36 +144,74 @@ class GraphragEngine(BaseEngine):
             f.write(config)
 
     def _execute_graphrag_run(self) -> None:
-        index_cli(
-            root_dir=self.work_dir,
-            verbose=False,
-            resume=None,
-            update_index_id=None,
-            memprofile=False,
-            nocache=False,
-            reporter="rich",  # rich, print, none
-            config_filepath=None,
-            emit="parquet",  # parquet is the only real option
-            dryrun=False,
-            init=False,
-            skip_validations=False,
+        # 1 准备启动参数
+        self.run_id = time.strftime("%Y%m%d-%H%M%S")
+        root = Path(self.work_dir).resolve()
+        config = load_config(root, None, self.run_id)
+        progress_reporter = GraphragReporter("GraphRAG")
+        # 2 从 api 入口启动 GraphRAG
+        outputs = asyncio.run(self._graphrag_listened_run(config, self.run_id, progress_reporter))
+        # 3 检查是否有错误
+        encountered_errors = any(
+            output.errors and len(output.errors) > 0 for output in outputs
         )
+        progress_reporter.stop()
+        if encountered_errors:
+            raise RuntimeError("Errors occurred during the pipeline run, see logs for more details.")
+        else:
+            print("All workflows completed successfully.")
 
-    def _execute_output_convert(self) -> None:
-        parquet_list = find_file(self.work_dir, "parquet")
-        for file in parquet_list:
-            pd.read_parquet(file).to_csv(f"{self.work_dir}/output/{os.path.basename(file).replace('parquet', 'csv')}",
-                                         index=False)
+    @staticmethod
+    async def _listen_progress_and_report(progress_reporter: RichProgressReporter,
+                                          interval=1.0):
+        while True:
+            if hasattr(progress_reporter, '_progressbar') and progress_reporter._progressbar:
+                now_task_name = progress_reporter._progressbar.tasks[-1].description
+                time_remaining = progress_reporter._progressbar.tasks[-1].time_remaining
+                total_work = progress_reporter._progressbar.tasks[-1].total
+                remaining_work = progress_reporter._progressbar.tasks[-1].remaining
+                percentage = progress_reporter._progressbar.tasks[-1].percentage
+                # 传递进度信息
+                print({
+                    "now_task_name": now_task_name,
+                    "time_remaining": time_remaining,
+                    "total_work": total_work,
+                    "remaining_work": remaining_work,
+                    "percentage": percentage
+                })
+            # 等待指定的时间间隔
+            await asyncio.sleep(interval)
 
-    def persist_local(self):
-        pass
+    @staticmethod
+    async def _graphrag_listened_run(config: GraphRagConfig,
+                                     run_id: str,
+                                     progress_reporter: GraphragReporter):
+        # 启动 GraphRAG 和
+        outputs = await asyncio.gather(
+            build_index(
+                config=config,
+                run_id=run_id,
+                is_resume_run=False,
+                is_update_run=False,
+                memory_profile=False,
+                progress_reporter=progress_reporter,
+                emit=["parquet"],
+            )
+        )
+        # 返回输出
+        return outputs[0]
 
-    def persist_database(self):
-        pass
+
+def _execute_output_convert(self) -> None:
+    parquet_list = find_file(self.work_dir, "parquet")
+    for file in parquet_list:
+        pd.read_parquet(file).to_csv(f"{self.work_dir}/output/{os.path.basename(file).replace('parquet', 'csv')}",
+                                     index=False)
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+
     load_dotenv()
 
     task_llm = TaskZhipuAI(llm_name=os.getenv("ZHIPU_LLM_NAME"),
@@ -160,8 +220,15 @@ if __name__ == "__main__":
     embedding_llm = EmbeddingsZhipuAI(embeddings_name=os.getenv("EMBEDDINGS_NAME"),
                                       api_key=os.getenv("EMBEDDINGS_API_KEY"),
                                       api_base=os.getenv("EMBEDDINGS_API_BASE"))
-    engine = GraphragEngine(llm=task_llm,
-                            input_type=["txt", "md"],
-                            input_dir="input",
-                            prompt_path="prompts/textbook_zh",
-                            embeddings=embedding_llm).execute()
+    database = GraphNeo4j(
+        uri=os.getenv("NEO4J_URI"),
+        username=os.getenv("NEO4J_USER"),
+        password=os.getenv("NEO4J_PASSWORD"),
+        database=os.getenv("NEO4J_DATABASE")
+    )
+    engine = GraphragEngine(work_name="离散数学",
+                            llm=task_llm,
+                            input_type=["txt", "md"],  # 此处可给单个文件类型、文件类型列表
+                            input_dir="test_input",  # 此处可给装有文本文件的文件夹路径、单个文件路径、文件路径列表
+                            embeddings=embedding_llm,
+                            graph_database=database).execute()

@@ -8,24 +8,6 @@ class BaseStructure(BaseModel, ABC):
     def get_index(self):
         pass
 
-    @abstractmethod
-    def dump_json(self):
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def from_json(file_path: str):
-        pass
-
-    @abstractmethod
-    def dump_pickle(self, file_path: str):
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def from_pickle(file_path: str):
-        pass
-
 
 class BaseTaskResult(BaseModel, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -54,6 +36,9 @@ class BaseTask(BaseModel):
 
     task_status: Any | None = Field(description="Task executing status", default=None)
     """任务执行状态"""
+
+    task_description: Any | None = Field(description="Task description", default=None)
+    """任务描述"""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     """pydantic 配置：允许任意类型"""

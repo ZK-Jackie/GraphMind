@@ -40,17 +40,33 @@ def try_parse_ast_to_json(function_string: str) -> tuple[str, dict]:
 def try_parse_json_object(input: str) -> tuple[str, dict]:
     """JSON cleaning and formatting utilities."""
     # Sometimes, the LLM returns a json string with some extra description, this function will clean it up.
-
+    #  first try
     result = None
     try:
         # Try parse first
         result = json.loads(input)
     except json.JSONDecodeError:
-        log.info("Warning: Error decoding faulty json, attempting repair")
-
+        log.info("Warning: Error decoding faulty json - 1/3")
     if result:
         return input, result
 
+    # second try
+    try:
+        result = json.loads(input.split("```")[1])
+    except json.JSONDecodeError:
+        log.info("Warning: Error decoding faulty json - 2/3")
+    if result:
+        return input, result
+
+    # third try
+    try:
+        result = _extract_json_code_block(input)
+    except json.JSONDecodeError:
+        log.info("Warning: Error decoding faulty json, attempting repair - 3/3")
+    if result:
+        return input, result
+
+    # repair json
     _pattern = r"\{(.*)\}"
     _match = re.search(_pattern, input)
     input = "{" + _match.group(1) + "}" if _match else input
@@ -92,11 +108,19 @@ def try_parse_json_object(input: str) -> tuple[str, dict]:
 
         except json.JSONDecodeError:
             log.exception("error loading json, json=%s", input)
-            return json_info, {}
+            raise json.JSONDecodeError
         else:
             if not isinstance(result, dict):
                 log.exception("not expected dict type. type=%s:", type(result))
-                return json_info, {}
+                raise json.JSONDecodeError
             return json_info, result
     else:
         return input, result
+
+
+def _extract_json_code_block(raw_str: str):
+    # Regular expression to match ```json ... ```
+    pattern = re.compile(r'```json\s*(.*?)\s*```', re.DOTALL)
+    # Find all matches
+    matches = pattern.findall(raw_str)
+    return json.loads(matches[0])

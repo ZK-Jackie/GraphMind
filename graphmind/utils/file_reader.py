@@ -1,8 +1,9 @@
 import os
 
+
 def find_file(file: str | list[str],
-              allowed_type: str | list[str]=None,
-              pattern: str=None) -> list[str]:
+              allowed_type: str | list[str] | tuple[str] = None,
+              pattern: str = None) -> list[str]:
     """
     预处理 file 字段，首先确保其为文件路径或目录路径（列表），最后将其转换为具体的文件路径列表
     Args:
@@ -11,6 +12,8 @@ def find_file(file: str | list[str],
         pattern: 文件名匹配模式，需要正则表达式
     Returns: 文件路径列表
     """
+    if allowed_type and isinstance(allowed_type, (str, list)):
+        allowed_type = tuple(allowed_type)
     # 处理文件路径
     if isinstance(file, str):
         # 两种情况：文件路径或目录路径
@@ -36,6 +39,7 @@ def find_file(file: str | list[str],
 
     return file
 
+
 def _check_isdir(path) -> bool:
     """
     检查是否是目录
@@ -56,7 +60,7 @@ def _check_isfile(path) -> bool:
     return os.path.isfile(path)
 
 
-def _check_name_match(name:str, pattern:str=None) -> bool:
+def _check_name_match(name: str, pattern: str = None) -> bool:
     """
     检查文件名是否匹配
     Args:
@@ -72,7 +76,10 @@ def _check_name_match(name:str, pattern:str=None) -> bool:
     return bool(pattern.match(name))
 
 
-def _list_files(directory, file_list, file_type=None, pattern:str=None) -> None:
+def _list_files(directory,
+                file_list,
+                file_type: tuple = None,
+                pattern: str = None) -> None:
     """
     遍历指定目录下的所有文件和子目录，将文件路径添加到列表中
     Args:

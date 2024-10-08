@@ -8,8 +8,8 @@ if __name__ == '__main__':
         stub = chat_service_pb2_grpc.ChatServiceStub(channel)
         response = stub.stream(chat_service_pb2.ChatMessage(
             role=1,
-            content="你好！",
-            chunkResp=True,
+            content="你可以总结一下我前文收获到的知识点吗？",
+            chunkResp=False,
             userId="Test",
             convId="1",
             messageId="Test"

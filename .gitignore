@@ -164,3 +164,9 @@ res/
 
 # Neo4j dump file
 *.dump
+
+# graphrag source code
+graphrag/
+
+# mineru source code
+mineru/

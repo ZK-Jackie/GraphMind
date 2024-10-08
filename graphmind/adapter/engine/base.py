@@ -1,16 +1,24 @@
+import json
+
+from langchain_core.embeddings import Embeddings
+from langchain_core.language_models import BaseChatModel
 from typing_extensions import Self
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 
 import os
 import time
 
 from graphmind.adapter.database import BaseGraphDatabase
 from graphmind.adapter.llm.base import BaseTaskLLM, BaseTextEmbeddings
-from graphmind.utils.text_reader.base import BaseReader
+from graphmind.adapter.reader.base import BaseReader
+from graphmind.core.base import GraphmindModel
 
 
 class BaseEngine(BaseModel, ABC):
+    work_name: str = Field(description="Work name", default="GraphMind")
+    """工作名字"""
+
     work_id: str = Field(description="Work Id", default=f"{time.strftime('%Y%m%d%H%M%S')}")
     """工作 ID"""
 
@@ -20,20 +28,14 @@ class BaseEngine(BaseModel, ABC):
     resume: bool = Field(default=False)
     """是否继续上次的任务"""
 
-    struct_type: str = Field(default="default")
-    """要选择数据处理的结构类型"""
-
-    llm: BaseTaskLLM | dict | None = Field(description="Language model configuration", default=None)
-    """任务型 LLM"""
-
-    reader: BaseReader | dict | None = Field(description="Text reader configuration", default=None)
+    reader: BaseReader | None = Field(description="Text reader configuration", default=None)
     """文件读取器"""
 
-    embeddings: BaseTextEmbeddings | dict | None = Field(description="Embeddings configuration", default=None)
-    """任务型嵌入模型"""
+    models: GraphmindModel | None = Field(description="GraphMind model configuration")
+    """GraphMind 模型配置"""
 
-    graph_database: BaseGraphDatabase | dict | None = Field(description="Graph database configuration", default=None)
-    """图数据库"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """pydantic 配置：允许任意类型"""
 
     @model_validator(mode="after")
     def validate_workdir(self) -> Self:
@@ -51,35 +53,29 @@ class BaseEngine(BaseModel, ABC):
     def execute(self, **kwargs):
         pass
 
-    @abstractmethod
-    def persist_local(self, **kwargs):
-        pass
-
-    @abstractmethod
-    def persist_database(self, **kwargs):
-        pass
-
 
 class BaseEntity(BaseModel):
     type: str | None = Field(description="Entity type", default=None)
     """实体类型"""
 
-    name: str | None = Field(description="Entity name", default=None)
+    name: str | None = Field(description="Entity name")
     """实体名字"""
 
-    attributes: dict | None = Field(description="Entity attributes", default=None)
+    level: str | int | None = Field(description="Entity level", default=None)
+    """实体等级"""
+
+    attributes: dict | None = Field(description="Entity attributes")
     """实体属性"""
 
     source: list | str | None = Field(description="Entity source", default=None)
     """实体来源"""
 
-    def dump_dict(self):
-        return {
-            "type": self.type,
-            "name": self.name,
-            "attributes": self.attributes,
-            "source": self.source
-        }
+    def pd_dump(self, include: set[str], exclude_kv: tuple[str, set] = None) -> dict[str, list[str]]:
+        ret = {}
+        for key in include:
+            ret[key] = [json.dumps(getattr(self, key), ensure_ascii=False)]
+        return ret
+
 
     def get_kv_attributes(self) -> str:
         temp_str = ""
@@ -109,12 +105,8 @@ class BaseRelation(BaseModel):
     source: list | str | None = Field(description="Entity source", default=None)
     """关系来源"""
 
-    def dump_dict(self):
-        return {
-            "start": self.start,
-            "end": self.end,
-            "relation": self.relation,
-            "description": self.description,
-            "attributes": self.attributes,
-            "source": self.source
-        }
+    def pd_dump(self, include: set[str]) -> dict[str, list[str]]:
+        ret = {}
+        for key in include:
+            ret[key] = [json.dumps(getattr(self, key), ensure_ascii=False)]
+        return ret

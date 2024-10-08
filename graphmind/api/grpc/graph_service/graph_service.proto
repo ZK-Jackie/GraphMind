@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package graphmind.grpc.graph_service;
+
+/*  build command:
+    python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. graph_service.proto
+ */
+// 状态（最全）
+enum StatusId {
+  // 未处理
+  UNPROCESS = 0;
+  // 正在处理
+  PROCESSING = 1;
+  // 处理完成
+  PROCESSED = 2;
+  // 处理失败
+  FAILED = 3;
+  // 处理超时
+  TIMEOUT = 4;
+  // 处理中断
+  CANCELLED = 5;
+  // 就绪等待处理（由 Java 端向 Python 端发送）
+  READY = 10;
+  // 开始处理（由 Java 端向 Python 端发送）
+  START = 11;
+  // 暂停处理，可以继续（由 Java 端向 Python 端发送）
+  PAUSE = 12;
+  // 继续处理（由 Java 端向 Python 端发送）
+  CONTINUE = 13;
+  // 结束处理，无法继续（由 Java 端向 Python 端发送）
+  END = 14;
+}
+
+// 构建图谱请求
+message BuildRequest {
+  // 任务 ID
+  string taskId = 1;
+  // 任务名（书籍名称）
+  string taskName = 2;
+  // 任务状态
+  StatusId status = 3;
+  // 目标服务器 bolt 地址（可选，但是数据库默认就是用 neo4j 不变更）
+  optional string boltAddress = 4;
+}
+
+// 构建图谱响应
+message BuildStatus {
+  // 任务 ID
+  string taskId = 1;
+  // 任务名（书籍名称）
+  string taskName = 2;
+  // 构建状态
+  StatusId status = 3;
+  // 构建信息
+  string message = 4;
+}
+
+// 图谱服务
+service GraphService {
+  // 构建图谱
+  rpc build (BuildRequest) returns (BuildStatus) {}
+}
