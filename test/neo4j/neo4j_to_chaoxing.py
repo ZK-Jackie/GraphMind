@@ -4,7 +4,7 @@ from neo4j import GraphDatabase
 NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USERNAME = "neo4j"
 NEO4J_PASSWORD = "password"
-NEO4J_DATABASE = "discrete-math-flash"
+NEO4J_DATABASE = "neo4j"
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD), database=NEO4J_DATABASE)
 
 chaoxing_df = pd.DataFrame(
@@ -14,7 +14,7 @@ chaoxing_df = pd.DataFrame(
 
 def level_query(df, level):
     with driver.session() as session:
-        result = session.run("MATCH (n) WHERE n.level = $level RETURN n", level=str(level))
+        result = session.run("MATCH (n) WHERE n.level = $level RETURN n", level=int(level))
         for record in result:
             desc = ""
             for key, value in record["n"].items():

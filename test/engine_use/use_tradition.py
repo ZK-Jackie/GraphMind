@@ -2,7 +2,7 @@ import os
 
 from graphmind.adapter.engine.hierarchy import HierarchyEngine
 from graphmind.adapter.llm import TaskZhipuAI
-from graphmind.utils.text_reader.markdown import MarkdownReader
+from graphmind.adapter.reader.markdown import MarkdownReader
 
 if __name__ == '__main__':
     task_llm = TaskZhipuAI(llm_name=os.getenv("ZHIPU_LLM_NAME"),
