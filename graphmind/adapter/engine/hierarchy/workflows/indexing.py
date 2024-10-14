@@ -2,13 +2,13 @@ import json
 import os
 
 from graphmind.adapter.engine.hierarchy.reporter import GraphmindReporter
-from graphmind.adapter.reader.base import BaseReader
+from graphmind.adapter.reader.markdown import MarkdownReader
 from graphmind.adapter.structure.tree import InfoForest
 
 
 def execute_reader(work_name: str,
                    work_dir: str,
-                   reader: BaseReader,
+                   reader: MarkdownReader,
                    reporter: GraphmindReporter,
                    resume: bool = False) -> InfoForest:
     """
@@ -32,11 +32,10 @@ def execute_reader(work_name: str,
         work_reporter.update(1)
         return forest_from_cache
     # 读取文件，构造森林
-    forest: InfoForest = reader.indexing()
+    forest: InfoForest = reader.indexing(reporter=work_reporter)
     forest.title = work_name
     # 持久化
     dump_cache(work_dir, forest)
-    work_reporter.update(1)
     return forest
 
 

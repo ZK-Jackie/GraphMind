@@ -20,7 +20,7 @@ class GraphmindReporter(BaseReporter):
     _parent: "GraphmindReporter | None" = None
     _workflows: dict[str, "GraphmindReporter"] = {}
     # 进度信息属性
-    _now_completed: int = 0
+    _now_completed: int = -1    # 任务开始时汇报一次
     _total_items: int = 0
 
     @property
@@ -51,6 +51,7 @@ class GraphmindReporter(BaseReporter):
             self._live = parent.live
             self._progressbar = Progress(console=self._console)
             self._task = self._progressbar.add_task(prefix, total=total_items)
+            self.update(1)  # 任务开始时汇报一次
         else:
             # 如果当前是顶级对象，仅作为标题显示
             self._console = Console()
@@ -83,7 +84,7 @@ class GraphmindReporter(BaseReporter):
         else:
             self._now_completed = self._total_items
         # 汇报进度
-        print(f"{self._prefix} - {self._now_completed}/{self._total_items}")
+        print(f"{self._prefix} - {self._now_completed}/{self._total_items}", flush=True)
 
     def __call__(self, iterable: Iterable, increment: int = 1):
         """更新进度并返回一个生成器"""

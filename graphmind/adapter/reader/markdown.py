@@ -3,15 +3,31 @@ from tqdm import tqdm
 
 
 from langchain_text_splitters import MarkdownHeaderTextSplitter
+
+from graphmind.adapter.engine.hierarchy.reporter import GraphmindReporter
 from graphmind.adapter.structure.tree import InfoForest, InfoTree, InfoNode
 from graphmind.adapter.reader.base import BaseReader
 
 
 class MarkdownReader(BaseReader):
-    skip_mark: str = Field(default="<abd>")
-    index_str: str | None = Field(default=None)
+    skip_mark: str = Field(default="<abd>", description="跳过标记")
+    """设置跳过标记，文档中包含该标记的段落将被跳过"""
 
-    def indexing(self) -> InfoForest:
+    file_title: str | None = Field(default="知识文档", description="文件标题")
+    """文件标题"""
+
+    index_str: str | None = Field(default=None, description="索引字符串")
+    """检查文档是否已经被索引"""
+
+    def indexing(self, reporter: GraphmindReporter) -> InfoForest:
+        """
+        读取、处理输入文件，将文件编制成 InfoForest 结构
+        Args:
+            reporter: GraphmindReporter 对象，必须事先初始化
+
+        Returns:
+
+        """
         splitter = MarkdownHeaderTextSplitter(
             headers_to_split_on=[
                 ("#", "Header1"),
@@ -26,9 +42,9 @@ class MarkdownReader(BaseReader):
             return_each_line=False,
         )
 
-        forest = InfoForest(title="《离散数学》")
+        forest = InfoForest(title=self.file_title)
         # 1. 逐个处理md文件
-        for md in tqdm(self.file, desc="Indexing markdown files"):
+        for md in reporter(self.file):
             # 打开文件，加载文件内容
             with open(md, "r", encoding="utf-8") as f:
                 markdown_text = f.read()

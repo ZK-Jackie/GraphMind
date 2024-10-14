@@ -13,7 +13,7 @@ from graphmind.core.base import GraphmindModel
 from graphmind.adapter.engine.base import BaseRelation
 from graphmind.adapter.engine.hierarchy.prompt_manager import PromptFactory
 from graphmind.adapter.engine.hierarchy.reporter import GraphmindReporter
-from graphmind.adapter.engine.hierarchy.workflows.chain import task_batch
+from graphmind.adapter.engine.hierarchy.task_llm.chain import task_batch
 from graphmind.adapter.structure import BaseTask
 from graphmind.adapter.structure.tree import InfoForest, InfoNode
 from graphmind.adapter.engine.hierarchy.prompts import relation_extract as RELATION_PROMPT
@@ -85,8 +85,10 @@ def _create_connect_task(node_list: list[InfoNode],
         None
 
     """
+    if resume:
+        print(node_list, kwargs)
     # 1 创建任务
-    work_reporter = reporter.add_workflow("创建连接实体任务", len(node_list))
+    work_reporter = reporter.add_workflow("创建初步关系提取任务", len(node_list))
     for node in work_reporter(node_list):
         if not node.content:
             continue
@@ -136,50 +138,54 @@ def _execute_connect_task(node_list: list[InfoNode],
         None
 
     """
-    # 1 任务执行
-    work_reporter = reporter.add_workflow("执行连接实体任务", len(node_list))
+    if resume:
+        print(node_list, kwargs)
+    # 1 准备任务
     batch_task_buf = []
-    for node in work_reporter(node_list, increment=0):
+    for node in node_list:
         if not node.relation_task:
-            work_reporter.update(1)
             continue
         batch_task_buf.append(node.relation_task)
-        if len(batch_task_buf) > models.llm_batch_size or node == node_list[-1]:
-            # 2 执行任务
-            temp_list = [{"system_prompt": task.task_system_prompt, "user_prompt": task.task_user_prompt}
-                         for task in batch_task_buf]
-            temp_outputs = task_batch(models, temp_list, enable_continue=True, reduce_continue=reduce_continue)
-            for i, task in enumerate(batch_task_buf):
-                task.task_output = temp_outputs[i].replace("任务完成", "")
-                task.task_status = "PROCESSED"
-            batch_task_buf = []
-            work_reporter.update(len(batch_task_buf))
+    # 2 执行任务
+    work_reporter = reporter.add_workflow("执行初步关系任务", len(batch_task_buf))
+    task_batch(models, batch_task_buf, work_reporter, enable_continue=True, reduce_continue=reduce_continue)
     # 3 转化结果
-    work_reporter = reporter.add_workflow("转化连接实体结果", len(node_list))
+    work_reporter = reporter.add_workflow("解析初步关系任务结果", len(node_list))
     for node in work_reporter(node_list):
         if not node.relation_task:
             continue
         # 解析结果
         try:
-            fixed_output, results = try_parse_json_object(node.relation_task.task_output)
+            results: list
+            # 清理任务输出
+            node.relation_task.task_output = node.relation_task.task_output.replace("任务完成", "")
+            # 解析任务输出
+            fixed_output, results = try_parse_json_object(node.relation_task.task_output, expect_type="list")
+            # 存储结果
+            node.relation_task.task_result = results
+            # 转化结果
+            for result in results:
+                node.relation.append(BaseRelation(
+                    start=result.get("实体1") or result.get("entity1"),
+                    end=result.get("实体2") or result.get("entity2"),
+                    relation=result.get("关系") or result.get("relationship"),
+                    description=result.get("描述") or result.get("description"),
+                    source=node.get_title_path()
+                ))
         except Exception as e:
-            warnings.warn(f"Failed to parse output: {e}")
+            warnings.warn(f"Failed to parse output: {e}, task_id: {node.relation_task.task_id}")
             node.relation_task.task_status = "FAILED"
-            with open(f"{work_dir}/cache/execute_connect_task_failed.jsonl", "a", encoding="utf-8") as f:
+            with open(f"{work_dir}/cache/relation_connect_task_failed.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps(node.relation_task.model_dump(mode="json"), ensure_ascii=False))
-            continue
-        # 存储结果
-        node.relation_task.task_result = results
-        # 转化结果
-        for result in results:
-            node.relation.append(BaseRelation(
-                start=result.get("实体1") or result.get("entity1"),
-                end=result.get("实体2") or result.get("entity2"),
-                relation=result.get("关系") or result.get("relationship"),
-                description=result.get("描述") or result.get("description"),
-                source=node.get_title_path()
-            ))
+                f.write("\n")
+        with open(f"{work_dir}/cache/relation_connect_task.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(node.relation_task.model_dump(mode="json"), ensure_ascii=False))
+            f.write("\n")
     return
+
+
+reduce_failed_cnt = 0
+merge_failed_cnt = 0
 
 
 def reduce_continue(old_output: str | None,
@@ -200,15 +206,37 @@ def reduce_continue(old_output: str | None,
         temp_old = ""
     temp_new = new_output.replace("任务完成", "")
     try:
-        old_output, old_results = try_parse_json_object(temp_old)
-        new_output, new_results = try_parse_json_object(temp_new)
+        old_output, old_results = try_parse_json_object(temp_old, expect_type="list")
+        new_output, new_results = try_parse_json_object(temp_new, expect_type="list")
     except Exception as e:
-        warnings.warn(f"Failed to parse output: {e}")
+        warnings.warn(f"Failed to parse output: {e},"
+                      f"old_output: {old_output[0:30]}...,"
+                      f"new_output: {new_output[0:30]}...")
+        global reduce_failed_cnt
+        reduce_failed_cnt += 1
+        with open(f"failed_output_{reduce_failed_cnt}.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps({
+                "old_output": old_output,
+                "new_output": new_output
+            }, ensure_ascii=False))
+            f.write("\n")
         return old_output
-    # 合并结果
-    if isinstance(old_results, list) and isinstance(new_results, list):
-        old_results.extend(new_results)
-    else:
+    try:
+        # 合并结果
+        if isinstance(old_results, list) and isinstance(new_results, list):
+            old_results.extend(new_results)
+        else:
+            return old_output
+    except Exception as e:
+        warnings.warn(f"Failed to merge output: {e}")
+        global merge_failed_cnt
+        merge_failed_cnt += 1
+        with open(f"failed_output_{merge_failed_cnt}.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps({
+                "old_results": old_results,
+                "new_results": new_results
+            }, ensure_ascii=False))
+            f.write("\n")
         return old_output
     return json.dumps(old_results, ensure_ascii=False)
 
@@ -273,3 +301,4 @@ def _dump_csv(node_list: list[InfoNode],
             relation_df = pd.concat([relation_df, new_row], ignore_index=True, axis=0)
     # 4 导出
     relation_df.to_csv(f"{work_dir}/base_relation.csv", index=False)
+    relation_df.to_parquet(f"{work_dir}/base_relation.parquet", index=False)

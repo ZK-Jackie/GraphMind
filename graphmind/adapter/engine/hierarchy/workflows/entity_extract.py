@@ -8,7 +8,7 @@ from langchain_core.prompts import PromptTemplate
 
 from graphmind.adapter.engine.hierarchy.reporter import GraphmindReporter
 from graphmind.core.base import GraphmindModel
-from graphmind.adapter.engine.hierarchy.workflows.chain import task_chain
+from graphmind.adapter.engine.hierarchy.task_llm.chain import task_batch
 from graphmind.adapter.engine.base import BaseEntity
 from graphmind.adapter.engine.hierarchy.prompt_manager import PromptFactory
 from graphmind.adapter.structure import BaseTask
@@ -56,14 +56,20 @@ def execute_entity_task(forest: InfoForest,
         "reporter": reporter,
         "resume": resume
     }
-    # 2 创建 & 执行等级任务
-    _create_level_task(**task_attr)
-    _execute_level_task(**task_attr)
-    # 3 创建 & 执行属性任务
-    _create_attribute_task(**task_attr)
-    _execute_attribute_task(**task_attr)
-    # 4 缓存表格
-    _dump_csv(node_list, work_dir, reporter, resume)
+    try:
+        # 2 创建 & 执行等级任务
+        _create_level_task(**task_attr)
+        _execute_level_task(**task_attr)
+        # 3 创建 & 执行属性任务
+        _create_attribute_task(**task_attr)
+        _execute_attribute_task(**task_attr)
+        # 4 缓存表格
+        _dump_csv(node_list, work_dir, reporter, resume)
+    except Exception as e:
+        warnings.warn(f"Unexpected error: {e}, forest has urgently saved.")
+        with open(f"{work_dir}/cache/execute_entity_task_failed.json", "a", encoding="utf-8") as f:
+            f.write(json.dumps(forest.model_dump(), ensure_ascii=False))
+        return None
     return forest
 
 
@@ -93,7 +99,10 @@ def _dump_csv(node_list: list[InfoNode],
             new_row = pd.DataFrame(entity.pd_dump(include=set(columns)), index=[0])
             entity_df = pd.concat([entity_df, new_row], ignore_index=True, axis=0)
     # 4 导出表格
+    dump_reporter = reporter.add_workflow("保存初步实体结果", 1)
     entity_df.to_csv(f"{work_dir}/base_entity.csv", index=False)
+    entity_df.to_parquet(f"{work_dir}/base_entity.parquet", index=False)
+    dump_reporter.update(1)
 
 
 def _create_level_task(node_list: list[InfoNode],
@@ -113,8 +122,10 @@ def _create_level_task(node_list: list[InfoNode],
     Returns:
 
     """
+    if resume:
+        print(work_dir, kwargs)
     # 1 创建任务
-    work_reporter = reporter.add_workflow("创建实体提取任务", len(node_list))
+    work_reporter = reporter.add_workflow("创建初步实体提取任务", len(node_list))
     for node in work_reporter(node_list):
         if not node.content:
             continue
@@ -159,32 +170,29 @@ def _execute_level_task(node_list: list[InfoNode],
         无
 
     """
+    if resume:
+        print(work_dir, kwargs)
     # 1 任务执行
-    work_reporter = reporter.add_workflow("执行实体提取任务", len(node_list))
     batch_task_buf = []
-    for node in work_reporter(node_list, increment=0):
+    for node in node_list:
         if not node.entity_level_task:
-            work_reporter.update(1)
+            # 检查是否有任务
             continue
+        # 任务筛选
         batch_task_buf.append(node.entity_level_task)
-        if len(batch_task_buf) >= models.llm_batch_size or node == node_list[-1]:
-            # 2 执行任务
-            temp_list = [{"system_prompt": task.task_system_prompt, "user_prompt": task.task_user_prompt}
-                         for task in batch_task_buf]
-            temp_outputs = task_chain(models).batch(temp_list)
-            for i, task in enumerate(batch_task_buf):
-                task.task_output = temp_outputs[i]
-                task.task_status = "PROCESSED"
-            work_reporter.update(len(batch_task_buf))
-            batch_task_buf = []
+    # 2 执行任务
+    work_reporter = reporter.add_workflow("执行初步实体提取任务", len(batch_task_buf))
+    task_batch(models, batch_task_buf, work_reporter)
     # 3 转化结果
-    work_reporter = reporter.add_workflow("解析实体提取任务结果", len(node_list))
+    work_reporter = reporter.add_workflow("解析初步实体提取任务结果", len(node_list))
     for node in work_reporter(node_list):
         if not node.entity_level_task:
             continue
         # 解析结果
         try:
-            fixed_output, results = try_parse_json_object(node.entity_level_task.task_output)
+            results: list
+            fixed_output, results = try_parse_json_object(node.entity_level_task.task_output,
+                                                          expect_type="list")
             # 存储结果
             node.entity_level_task.task_result = results
             # 转化结果，注意一个节点可能有多个实体
@@ -194,7 +202,7 @@ def _execute_level_task(node_list: list[InfoNode],
                     name=result.get("实体名称") or result.get("名称") or result.get("name"),
                     level=result.get("评级") or result.get("level"),
                     attributes={
-                        "评级解释": result.get("评级解释") or result.get("解释") or result.get("explanation")
+                        # "评级解释": result.get("评级解释") or result.get("解释") or result.get("explanation") or None
                     },
                     source=node.get_title_path()
                 ))
@@ -202,6 +210,7 @@ def _execute_level_task(node_list: list[InfoNode],
         except Exception as e:
             warnings.warn(f"Failed to parse output: {e}")
             node.entity_level_task.task_status = "FAILED"
+            node.entity_level_task.task_description = f"{e}"
             with open(f"{work_dir}/cache/entity_level_task_failed.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps(node.entity_level_task.model_dump(), ensure_ascii=False) + "\n")
         # 4 缓存进度
@@ -228,8 +237,10 @@ def _create_attribute_task(node_list: list[InfoNode],
         无
 
     """
+    if resume:
+        print(work_dir, kwargs)
     # 1 创建任务
-    work_reporter = reporter.add_workflow("创建实体属性提取任务", len(node_list))
+    work_reporter = reporter.add_workflow("创建初步实体属性提取任务", len(node_list))
     for node in work_reporter(node_list):
         if not node.entity:
             continue
@@ -237,10 +248,10 @@ def _create_attribute_task(node_list: list[InfoNode],
         temp_insertions = ""
         temp_insertions += prompts.build_insertion(ATTRIBUTE_PROMPT.prompt_insertion_template, 0, work_name)
         for i, title in enumerate(node.get_title_path()):
-            temp_insertions += prompts.build_insertion(ATTRIBUTE_PROMPT.prompt_insertion_template, i, title)
+            temp_insertions += prompts.build_insertion(ATTRIBUTE_PROMPT.prompt_insertion_template, i + 1, title)
         # 构造插入语句——正文
         temp_insertions += prompts.build_insertion(ATTRIBUTE_PROMPT.prompt_insertion_template, -1, node.content)
-        # 构造实体列表
+        # 构造实体列表，每次最多5个
         entity_list = [entity.name for entity in node.entity]
         entity_list_chunks = [entity_list[i:i + 5] for i in range(0, len(entity_list), 5)]
         # 构建提示词
@@ -278,31 +289,26 @@ def _execute_attribute_task(node_list: list[InfoNode],
     Returns:
         无
     """
+    if resume:
+        print(work_dir, kwargs)
     # 1 任务执行
-    work_reporter = reporter.add_workflow("执行实体属性提取任务", __count_entity(node_list))
     batch_task_buf = []
-    for node in work_reporter(node_list, increment=0):
+    for node in node_list:
         if not node.entity_attr_task:
-            work_reporter.update(1)
             continue
         batch_task_buf.extend(node.entity_attr_task)
-        if len(batch_task_buf) > models.llm_batch_size or node == node_list[-1]:
-            # 2 执行任务
-            temp_list = [{"system_prompt": task.task_system_prompt, "user_prompt": task.task_user_prompt}
-                         for task in batch_task_buf]
-            temp_outputs = task_chain(models).batch(temp_list)
-            for i, task in enumerate(batch_task_buf):
-                task.task_output = temp_outputs[i]
-                task.task_status = "PROCESSED"
-            work_reporter.update(len(batch_task_buf))
-            batch_task_buf = []
+    # 2 执行任务
+    work_reporter = reporter.add_workflow("执行初步实体属性提取任务", len(batch_task_buf))
+    task_batch(models, batch_task_buf, work_reporter)
     # 3 转化结果
-    work_reporter = reporter.add_workflow("解析实体属性提取任务结果", len(node_list))
+    work_reporter = reporter.add_workflow("解析初步实体属性提取任务结果", len(node_list))
     for node in work_reporter(node_list):
-        if not node.entity_attr_task:
+        if (not node.entity_attr_task
+                or node.entity_attr_task[0].task_status == "FAILED"):
             continue
         for task in node.entity_attr_task:
             try:
+                result: dict
                 # 解析结果
                 fixed_output, result = try_parse_json_object(task.task_output)
                 # 存储结果
@@ -311,34 +317,14 @@ def _execute_attribute_task(node_list: list[InfoNode],
                 for entity in node.entity:
                     if entity.name in result:
                         entity.attributes.update(result.get(entity.name, {}))
-                    else:
-                        with open(f"{work_dir}/cache/entity_attr_task_failed.jsonl", "a", encoding="utf-8") as f:
-                            f.write(json.dumps(task.model_dump(), ensure_ascii=False) + "\n")
-                        task.task_status = "FAILED"
-                        continue
                 task.task_status = "SUCCESS"
             except Exception as e:
                 warnings.warn(f"Failed to parse output: {e}")
                 task.task_status = "FAILED"
+                task.task_description = f"{e}"
                 with open(f"{work_dir}/cache/entity_attr_task_failed.jsonl", "a", encoding="utf-8") as f:
                     f.write(json.dumps(task.model_dump(), ensure_ascii=False) + "\n")
             # 4 缓存进度
             with open(f"{work_dir}/cache/entity_attr_task.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps(task.model_dump(), ensure_ascii=False) + "\n")
     return
-
-
-def __count_entity(node_list: list[InfoNode]) -> int:
-    """
-    计算实体数量
-    Args:
-        node_list: InfoNode 对象列表
-
-    Returns:
-        int
-
-    """
-    entity_cnt = 0
-    for node in node_list:
-        entity_cnt += node.get_entity_num()
-    return entity_cnt

@@ -11,7 +11,7 @@ from graphmind.adapter.structure import BaseStructure
 
 class BaseReader(BaseModel, ABC):
     file: str | list | None = Field(description="File path or directory path")
-    """输入文件或输入文件目录"""
+    """输入文件或输入文件目录，必须提供"""
 
     file_type: str | list | None = Field(description="File type", default=None)
     """需要处理的文件类型"""

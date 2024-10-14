@@ -58,13 +58,13 @@ class BaseEntity(BaseModel):
     type: str | None = Field(description="Entity type", default=None)
     """实体类型"""
 
-    name: str | None = Field(description="Entity name")
+    name: str = Field(description="Entity name")
     """实体名字"""
 
     level: str | int | None = Field(description="Entity level", default=None)
     """实体等级"""
 
-    attributes: dict | None = Field(description="Entity attributes")
+    attributes: dict = Field(description="Entity attributes")
     """实体属性"""
 
     source: list | str | None = Field(description="Entity source", default=None)

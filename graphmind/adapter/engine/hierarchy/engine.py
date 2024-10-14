@@ -1,7 +1,9 @@
+import os
 from typing import List
 from typing_extensions import Self
 
 from graphmind.adapter.engine.hierarchy.workflows.entity_merge import execute_entity_merge
+from graphmind.adapter.engine.hierarchy.workflows.relation_merge import execute_relation_merge
 from graphmind.core.base import GraphmindModel, get_default_llm, get_default_embeddings, get_default_database
 
 from graphmind.adapter.structure.tree import BaseTask
@@ -10,7 +12,6 @@ from graphmind.adapter.engine.hierarchy.reporter import GraphmindReporter
 from graphmind.adapter.engine.hierarchy.workflows.entity_extract import execute_entity_task
 from graphmind.adapter.engine.hierarchy.workflows.indexing import execute_reader
 from graphmind.adapter.engine.hierarchy.workflows.relation_extract import execute_relation_task
-
 
 
 class HierarchyEngine(BaseEngine):
@@ -41,8 +42,10 @@ class HierarchyEngine(BaseEngine):
         execute_relation_task(**task_param)
         # 4 实体去重
         execute_entity_merge(**task_param)
-        # 5 关系去重（略）
-
+        # 5 关系去重
+        # execute_relation_merge(**task_param)
+        # 6 持久化
+        # self.persist()
         return self
 
     def persist(self, **kwargs) -> Self:
@@ -57,9 +60,11 @@ if __name__ == '__main__':
     load_dotenv()
 
     models = GraphmindModel(llm=get_default_llm(),
+                            llm_batch_size=os.getenv("LLM_CONCUR_NUM", 20),
+                            task_buffer_size=os.getenv("TASK_BUFFER_SIZE", 32),
                             embeddings=get_default_embeddings(),
                             database=get_default_database(debug=True))
-    reader = MarkdownReader(file="test_input", skip_mark="<abd>")
+    reader = MarkdownReader(file="input", skip_mark="<abd>", file_title="离散数学")
 
     engine = HierarchyEngine(models=models, reader=reader, work_name="离散数学")
 
