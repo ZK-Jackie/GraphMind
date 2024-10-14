@@ -5,6 +5,20 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from graphmind.core.base import GraphmindModelConfig
+
+
+class UserModelConfig(BaseModel):
+    """
+    用户模型配置
+    """
+    user_id: str | None = Field(description="User ID", default=None)
+    """用户ID"""
+
+    graphmind_config: GraphmindModelConfig | None = Field(description="Graphmind配置", default=None)
+    """Graphmind配置"""
+
+
 
 class RoleEnum(Enum):
     """
