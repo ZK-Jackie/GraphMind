@@ -2,7 +2,6 @@ import functools
 import logging
 from typing import Callable
 
-from graphmind.api.grpc.chat_service import chat_service_pb2
 from graphmind.api.grpc.request.chat_status_request import chat_status_report
 from graphmind.core.base import BaseReporter
 from graphmind.service.chat.base import ChatStatus, StatusEnum
