@@ -1,3 +1,7 @@
+"""
+测试正常启动
+"""
+
 from graphmind.serve_api import serve
 from main import logger_init
 
