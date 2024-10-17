@@ -3,7 +3,8 @@ from redis import Redis
 
 
 class RedisConfig:
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+    REDIS_URL: str = (os.getenv("REDIS_URL") or
+                      f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}/0")
     """Redis数据库连接信息，默认为本地连接"""
 
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
