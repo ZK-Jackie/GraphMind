@@ -53,7 +53,6 @@ class ChatServiceServicer(object):
 
     def stream(self, request, context):
         """Java 流式获取 AI 消息
-        定义 Http 接口
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -135,6 +134,126 @@ class ChatService(object):
             '/graphmind.grpc.chat_service.ChatService/invoke',
             chat__service__pb2.ChatMessage.SerializeToString,
             chat__service__pb2.ChatMessage.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+
+class ChatStatusServiceStub(object):
+    """定义聊天信息处理状态服务
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.report = channel.unary_unary(
+                '/graphmind.grpc.chat_service.ChatStatusService/report',
+                request_serializer=chat__service__pb2.ChatStatus.SerializeToString,
+                response_deserializer=chat__service__pb2.Empty.FromString,
+                _registered_method=True)
+        self.control = channel.unary_unary(
+                '/graphmind.grpc.chat_service.ChatStatusService/control',
+                request_serializer=chat__service__pb2.ChatStatus.SerializeToString,
+                response_deserializer=chat__service__pb2.Empty.FromString,
+                _registered_method=True)
+
+
+class ChatStatusServiceServicer(object):
+    """定义聊天信息处理状态服务
+    """
+
+    def report(self, request, context):
+        """发送当前处理状态信息（理解：python 汇报处理状态，提供 ChatStatus； Java 端只需返回空）
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def control(self, request, context):
+        """接受状态控制信息（理解：Java 端发送控制信息，提供 ChatStatus；python 端只需返回空，python 将做一个 report）
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_ChatStatusServiceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'report': grpc.unary_unary_rpc_method_handler(
+                    servicer.report,
+                    request_deserializer=chat__service__pb2.ChatStatus.FromString,
+                    response_serializer=chat__service__pb2.Empty.SerializeToString,
+            ),
+            'control': grpc.unary_unary_rpc_method_handler(
+                    servicer.control,
+                    request_deserializer=chat__service__pb2.ChatStatus.FromString,
+                    response_serializer=chat__service__pb2.Empty.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'graphmind.grpc.chat_service.ChatStatusService', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('graphmind.grpc.chat_service.ChatStatusService', rpc_method_handlers)
+
+
+ # This class is part of an EXPERIMENTAL API.
+class ChatStatusService(object):
+    """定义聊天信息处理状态服务
+    """
+
+    @staticmethod
+    def report(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/graphmind.grpc.chat_service.ChatStatusService/report',
+            chat__service__pb2.ChatStatus.SerializeToString,
+            chat__service__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def control(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/graphmind.grpc.chat_service.ChatStatusService/control',
+            chat__service__pb2.ChatStatus.SerializeToString,
+            chat__service__pb2.Empty.FromString,
             options,
             channel_credentials,
             insecure,

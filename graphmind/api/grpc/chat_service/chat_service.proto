@@ -21,6 +21,8 @@ enum StatusId {
   CANCELLED = 5;
   // 开始处理（由 Java 端向 Python 端发送）
   START = 11;
+  // 暂停处理（由 Java 端向 Python 端发送）
+  PAUSE = 12;
   // 继续处理（由 Java 端向 Python 端发送）
   CONTINUE = 13;
   // 结束处理，无法继续（由 Java 端向 Python 端发送）

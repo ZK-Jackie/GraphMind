@@ -24,17 +24,25 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12\x63hat_service.proto\x12\x1bgraphmind.grpc.chat_service\"\x95\x01\n\x0b\x43hatMessage\x12/\n\x04role\x18\x01 \x01(\x0e\x32!.graphmind.grpc.chat_service.Role\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x11\n\tchunkResp\x18\x03 \x01(\x08\x12\x0e\n\x06userId\x18\x04 \x01(\t\x12\x0e\n\x06\x63onvId\x18\x05 \x01(\t\x12\x11\n\tmessageId\x18\x06 \x01(\t*\x18\n\x04Role\x12\x08\n\x04USER\x10\x00\x12\x06\n\x02\x41I\x10\x01\x32\xcf\x01\n\x0b\x43hatService\x12`\n\x06stream\x12(.graphmind.grpc.chat_service.ChatMessage\x1a(.graphmind.grpc.chat_service.ChatMessage\"\x00\x30\x01\x12^\n\x06invoke\x12(.graphmind.grpc.chat_service.ChatMessage\x1a(.graphmind.grpc.chat_service.ChatMessage\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12\x63hat_service.proto\x12\x1bgraphmind.grpc.chat_service\"\x95\x01\n\x0b\x43hatMessage\x12/\n\x04role\x18\x01 \x01(\x0e\x32!.graphmind.grpc.chat_service.Role\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x11\n\tchunkResp\x18\x03 \x01(\x08\x12\x0e\n\x06userId\x18\x04 \x01(\t\x12\x0e\n\x06\x63onvId\x18\x05 \x01(\t\x12\x11\n\tmessageId\x18\x06 \x01(\t\"\xd6\x01\n\nChatStatus\x12/\n\x04role\x18\x01 \x01(\x0e\x32!.graphmind.grpc.chat_service.Role\x12\x37\n\x08statusId\x18\x02 \x01(\x0e\x32%.graphmind.grpc.chat_service.StatusId\x12\x15\n\rstatusMessage\x18\x03 \x01(\t\x12\x0e\n\x06userId\x18\x04 \x01(\t\x12\x0e\n\x06\x63onvId\x18\x05 \x01(\t\x12\x15\n\ruserMessageId\x18\x06 \x01(\t\x12\x10\n\x08sendTime\x18\x07 \x01(\t\"\x07\n\x05\x45mpty*\x8d\x01\n\x08StatusId\x12\r\n\tUNPROCESS\x10\x00\x12\x0e\n\nPROCESSING\x10\x01\x12\r\n\tPROCESSED\x10\x02\x12\n\n\x06\x46\x41ILED\x10\x03\x12\x0b\n\x07TIMEOUT\x10\x04\x12\r\n\tCANCELLED\x10\x05\x12\t\n\x05START\x10\x0b\x12\t\n\x05PAUSE\x10\x0c\x12\x0c\n\x08\x43ONTINUE\x10\r\x12\x07\n\x03\x45ND\x10\x0e*\x18\n\x04Role\x12\x08\n\x04USER\x10\x00\x12\x06\n\x02\x41I\x10\x01\x32\xcf\x01\n\x0b\x43hatService\x12`\n\x06stream\x12(.graphmind.grpc.chat_service.ChatMessage\x1a(.graphmind.grpc.chat_service.ChatMessage\"\x00\x30\x01\x12^\n\x06invoke\x12(.graphmind.grpc.chat_service.ChatMessage\x1a(.graphmind.grpc.chat_service.ChatMessage\"\x00\x32\xc6\x01\n\x11\x43hatStatusService\x12W\n\x06report\x12\'.graphmind.grpc.chat_service.ChatStatus\x1a\".graphmind.grpc.chat_service.Empty\"\x00\x12X\n\x07\x63ontrol\x12\'.graphmind.grpc.chat_service.ChatStatus\x1a\".graphmind.grpc.chat_service.Empty\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'chat_service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_ROLE']._serialized_start=203
-  _globals['_ROLE']._serialized_end=227
+  _globals['_STATUSID']._serialized_start=430
+  _globals['_STATUSID']._serialized_end=571
+  _globals['_ROLE']._serialized_start=573
+  _globals['_ROLE']._serialized_end=597
   _globals['_CHATMESSAGE']._serialized_start=52
   _globals['_CHATMESSAGE']._serialized_end=201
-  _globals['_CHATSERVICE']._serialized_start=230
-  _globals['_CHATSERVICE']._serialized_end=437
+  _globals['_CHATSTATUS']._serialized_start=204
+  _globals['_CHATSTATUS']._serialized_end=418
+  _globals['_EMPTY']._serialized_start=420
+  _globals['_EMPTY']._serialized_end=427
+  _globals['_CHATSERVICE']._serialized_start=600
+  _globals['_CHATSERVICE']._serialized_end=807
+  _globals['_CHATSTATUSSERVICE']._serialized_start=810
+  _globals['_CHATSTATUSSERVICE']._serialized_end=1008
 # @@protoc_insertion_point(module_scope)

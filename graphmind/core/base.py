@@ -1,9 +1,12 @@
 import asyncio
 import os
 
+from abc import ABC
+from typing import Any
+from typing_extensions import Self, Literal
+
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from typing_extensions import Self, Literal
 
 from graphmind.adapter.database import GraphNeo4j
 
@@ -28,19 +31,20 @@ class LLMConfig(BaseModel):
     openai_api_base: str = Field(description="Base url for LLM", default=os.getenv("ZHIPU_API_BASE"))
     """LLM base url"""
 
-    extra_config: dict = Field(description="Extra configurations for LLM", default_factory=dict)
+    extra_config: dict = Field(description="Extra configurations for LLM", default_factory=dict, exclude=True)
     """LLM 其他配置，应当与 LangChain 支持的保持一致"""
 
     concur_limit: int = Field(description="Concurrent limit for LLM", default=20, exclude=True)
     """LLM 并发限制"""
 
-    debug: bool = Field(description="Debug mode for LLM", default=False)
+    debug: bool = Field(description="Debug mode for LLM", default=False, exclude=True)
     """LLM 调试模式"""
 
-    verbose: bool = Field(description="Verbose mode for LLM", default=False)
+    verbose: bool = Field(description="Verbose mode for LLM", default=False, exclude=True)
     """LLM 详细用户控制台输出模式"""
 
     model_config = ConfigDict(protected_namespaces=())
+    """配置无保护的命名空间"""
 
 
 class EmbeddingsConfig(LLMConfig):
@@ -63,11 +67,11 @@ class EmbeddingsConfig(LLMConfig):
     """嵌入维度"""
 
 
-class GraphDBConfig(BaseModel):
+class GraphDatabaseConfig(BaseModel):
     """
     Graph database configurations
     """
-    type: Literal["neo4j", "memgraph"] = Field(description="Type of graph database", default="neo4j")
+    type: Literal["neo4j", "memgraph"] = Field(description="Type of graph database", default="neo4j", exclude=True)
     """图数据库类型"""
 
     uri: str | None = Field(description="URI for Neo4j", default=os.getenv("NEO4J_URI"))
@@ -98,9 +102,6 @@ class GraphmindModelConfig(BaseModel):
 
     embeddings: EmbeddingsConfig = Field(description="Embeddings configurations", default_factory=EmbeddingsConfig)
     """嵌入配置"""
-
-    database: GraphDBConfig = Field(description="Graph database configurations", default_factory=GraphDBConfig)
-    """图数据库配置"""
 
     @model_validator(mode="before")
     def validate_environment(cls, values: dict) -> dict:
@@ -202,3 +203,17 @@ def get_default_database(**kwargs) -> GraphNeo4j:
         database=os.getenv("NEO4J_DATABASE"),
         **kwargs
     )
+
+
+class BaseReporter(ABC):
+    """
+    项目汇报器基类
+    """
+
+    def report_progress(self, progress: Any):
+        """汇报工作进度"""
+        pass
+
+    def report_status(self, status: Any):
+        """汇报执行状态"""
+        pass

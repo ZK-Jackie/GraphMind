@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from redis import Redis
 
-from graphmind.service.agent_build.memory.redis import RedisSaver
+from graphmind.service.chat.chat_agent.memory.redis import RedisSaver
 
 
 @tool

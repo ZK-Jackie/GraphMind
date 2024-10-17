@@ -1,4 +1,6 @@
-# 测试stream接口
+"""
+测试 gRPC 服务调用接口
+"""
 import grpc
 
 from graphmind.api.grpc.chat_service import chat_service_pb2_grpc, chat_service_pb2

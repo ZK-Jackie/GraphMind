@@ -1,0 +1,52 @@
+version: '3.8'
+
+### 这个 docker file 没写完，不能跑！ ###
+
+services:
+  # https://neo4j.com/docs/operations-manual/current/docker/
+  neo4j:
+    image: neo4j:5.24.1-community
+    container_name: gm_neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/password  # 设置 Neo4j 用户名密码，格式为 neo4j/密码
+    ports:
+      - "7474:7474"  # 浏览器访问端口
+      - "7687:7687"  # Bolt 协议端口
+    volumes:
+      - ./neo4j/conf:/conf  # Neo4j 配置文件目录
+      - ./neo4j/plugins:/plugins  # Neo4j 插件目录
+      - ./neo4j/data:/data  # Neo4j 数据持久化目录
+      - ./neo4j/backups:/backups  # 使用dump/loads备份数据的目录
+      - ./neo4j/scripts/entrypoint.sh:/var/lib/neo4j/entrypoint.sh  # 启动脚本
+    restart: unless-stopped
+    entrypoint: [ "bash", "/var/lib/neo4j/entrypoint.sh" ]  # 使用自定义的启动文件
+
+  # https://redis.io/docs/latest/operate/oss_and_stack/install/install-stack/docker/
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: gm_redis
+    ports:
+      - "6379:6379"  # Redis 默认端口
+    restart: unless-stopped
+
+  # https://github.com/songquanpeng/one-api?tab=readme-ov-file#%E9%83%A8%E7%BD%B2
+#  one-api:
+#    image: justsong/one-api:latest
+#    container_name: gm_one_api
+#    ports:
+#      - "3000:3000"  # One API 默认端口
+#    restart: unless-stopped
+
+  # https://hub.docker.com/_/mysql
+#  mysql:
+#    image: mysql:8.0
+#    container_name: gm_mysql
+#    environment:
+#      - MYSQL_ROOT_PASSWORD=password  # 设置 MySQL root 用户密码
+#    ports:
+#      - "3306:3306"  # MySQL 默认端口
+#    volumes:
+#      - ./mysql/conf:/etc/mysql/conf.d  # MySQL 配置文件目录
+#      - ./mysql/data:/var/lib/mysql  # MySQL 数据持久化目录
+#    restart: unless-stopped
+

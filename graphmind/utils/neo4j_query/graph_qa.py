@@ -1,5 +1,6 @@
 import asyncio
 import warnings
+import logging
 from typing import Any
 
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
@@ -9,6 +10,8 @@ from graphmind.utils.neo4j_query.cyphers.cypher_template import SingleNodeTempla
     OverallNodeTemplate
 from graphmind.utils.neo4j_query.entity_extract import entity_extract, EntityExtractResult
 from graphmind.utils.neo4j_query.type_classify import type_classify
+
+logger = logging.getLogger(__name__)
 
 
 def get_graph_context(llm: ChatOpenAI,
@@ -85,4 +88,5 @@ async def batch_cypher_query(database: GraphNeo4j,
             warnings.warn(f"Query type not supported.")
             tasks.append(None)
     results = await asyncio.gather(*tasks)
+    logger.info(f"Batch cypher query results: {results}")
     return results

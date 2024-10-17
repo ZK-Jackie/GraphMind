@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 from graphmind.adapter.database import GraphNeo4j
-from graphmind.core.base import LLMConfig, EmbeddingsConfig, GraphDBConfig
+from graphmind.core.base import LLMConfig, EmbeddingsConfig, GraphDatabaseConfig
 
 
 def get_model_from_config(config):
@@ -9,7 +9,7 @@ def get_model_from_config(config):
         return ChatOpenAI(**config.model_dump())
     elif isinstance(config, EmbeddingsConfig):
         return OpenAIEmbeddings(**config.model_dump())
-    elif isinstance(config, GraphDBConfig):
+    elif isinstance(config, GraphDatabaseConfig):
         return GraphNeo4j(**config.model_dump())
 
     return None

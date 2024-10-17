@@ -1,9 +1,12 @@
 import asyncio
 import json
+import logging
 
 from graphmind.adapter.database import GraphNeo4j
 from graphmind.utils.dict_list_remove_dup import dict_list_remove_dup
 from graphmind.utils.neo4j_query.base import CypherResult, RelatedNode
+
+logger = logging.getLogger(__name__)
 
 IGNORE_ATTRIBUTE = ['name', 'description', 'nameEmbeddings', 'description_embedding', "id", "human_readable_id", "uid"]
 
@@ -84,6 +87,7 @@ class SingleNodeTemplate:
         # 1 构造查询
         cypher_queries = SingleNodeTemplate.build_singlenode_queries(entity_list)
         # 2 执行查询
+        logger.info(f"executing cypher queries: {cypher_queries}")
         raw_result_list = await database.batch(cypher_queries)
         # 3 结果解析
         result_list = []
@@ -185,6 +189,7 @@ class MultiNodeTemplate:
         # 1 构造查询
         cypher_queries = MultiNodeTemplate.build_multinode_queries(entity_list)
         # 2 执行查询
+        logger.info(f"executing cypher queries: {cypher_queries}")
         raw_result_list = await database.batch(cypher_queries)
         # 3 结果解析
         result_list = []
@@ -277,6 +282,7 @@ class OverallNodeTemplate:
         # 1 构造查询
         cypher_queries = OverallNodeTemplate.build_overall_queries(entity_list)
         # 2 执行查询 有一种狗血结果是查询结果为空 此时要注意返回 None
+        logger.info(f"executing cypher queries: {cypher_queries}")
         raw_result_list = await database.batch(cypher_queries)
         if raw_result_list is None or raw_result_list[0] is None or len(raw_result_list) == 0:
             return "None"

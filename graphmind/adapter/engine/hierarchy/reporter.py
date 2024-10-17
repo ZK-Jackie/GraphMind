@@ -4,7 +4,7 @@ from rich.console import Console
 from rich.live import Live
 from rich.progress import Progress, TaskID
 
-from graphmind.adapter.engine.reporter import BaseReporter
+from graphmind.core.base import BaseReporter
 
 
 class GraphmindReporter(BaseReporter):
